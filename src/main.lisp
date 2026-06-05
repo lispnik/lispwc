@@ -1,6 +1,6 @@
 ;;;; -*- Mode: lisp; indent-tabs-mode: nil -*-
 ;;;
-;;; main.lisp --- Milestone 1: headless bring-up
+;;; main.lisp --- headless bring-up
 ;;;
 ;;; MIT license.
 ;;;
@@ -64,7 +64,7 @@ the scene, and start listening for frames."
 
 (defun render-color-test (&key (width 64) (height 64) (verbosity 1)
                                (rgb '(0.10 0.20 0.45)))
-  "M1.5: render a solid color into a CPU buffer with a wlr_render_pass, then
+  "render a solid color into a CPU buffer with a wlr_render_pass, then
 read pixel (0,0) back.  Returns (values r g b) as 0-255.  Use
 WLR_RENDERER=pixman so the buffer is CPU-mappable."
   (destructuring-bind (cr cg cb) rgb

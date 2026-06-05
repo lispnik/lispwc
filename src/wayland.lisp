@@ -22,6 +22,11 @@
 ;; wl_list_insert/remove are exported; wl_signal_add itself is static inline.
 (cffi:defcfun ("wl_list_insert" wl-list-insert) :void (list :pointer) (elm :pointer))
 (cffi:defcfun ("wl_list_remove" wl-list-remove) :void (elm :pointer))
+;; event-loop timer (to bound a run that has no frame loop)
+(cffi:defcfun ("wl_event_loop_add_timer" wl-event-loop-add-timer) :pointer
+  (loop :pointer) (func :pointer) (data :pointer))
+(cffi:defcfun ("wl_event_source_timer_update" wl-event-source-timer-update) :int
+  (source :pointer) (ms :int))
 
 (defvar *listeners* '()
   "Keeps wl_listener structs and their callbacks reachable for the run's life.")

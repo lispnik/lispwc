@@ -6,4 +6,4 @@
 
 (defpackage #:lispwc
   (:use #:cl #:cffi-callback-closures)
-  (:export #:run-headless #:render-color-test #:run-with-client #:run-multi #:run-drm))
+  (:export #:run-headless #:render-color-test #:run-with-client #:run-multi #:run-drm #:run-input))

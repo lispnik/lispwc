@@ -24,6 +24,11 @@
 (include "wlr/types/wlr_scene.h")
 (include "wlr/types/wlr_compositor.h")
 (include "wlr/types/wlr_xdg_shell.h")
+(include "wlr/types/wlr_cursor.h")
+(include "wlr/types/wlr_output_layout.h")
+(include "wlr/types/wlr_input_device.h")
+(include "wlr/types/wlr_pointer.h")
+(include "wlr/types/wlr_keyboard.h")
 (include "wlr/util/log.h")
 (include "wlr/util/box.h")
 (include "wlr/render/pass.h")
@@ -39,6 +44,7 @@
 ;; A wl_signal is a single wl_list (two pointers) = 16 bytes; we size the slots
 ;; with :count 2 so the offsets are right and grovel's size check is happy.
 (cstruct wlr-backend "struct wlr_backend"
+  (new-input  "events.new_input"  :type :pointer :count 2)
   (new-output "events.new_output" :type :pointer :count 2))
 
 (cstruct wlr-output "struct wlr_output"
@@ -51,7 +57,7 @@
   (sec  "tv_sec"  :type :long)
   (nsec "tv_nsec" :type :long))
 
-;;; --- M1.5: render-to-buffer + pixel readback ---
+;;; --- render-to-buffer + pixel readback ---
 (cstruct wlr-drm-format "struct wlr_drm_format"
   (format    "format"    :type :uint32)
   (len       "len"       :type :unsigned-long)
@@ -72,7 +78,7 @@
 
 (constant (+drm-format-xrgb8888+ "DRM_FORMAT_XRGB8888"))
 
-;;; --- M2: xdg-shell ---
+;;; --- xdg-shell ---
 (cstruct wlr-xdg-shell "struct wlr_xdg_shell"
   (new-toplevel "events.new_toplevel" :type :pointer :count 2))
 
@@ -86,3 +92,30 @@
 (cstruct wlr-surface "struct wlr_surface"
   (commit "events.commit" :type :pointer :count 2)
   (map    "events.map"    :type :pointer :count 2))
+
+;;; --- input events (wlr_cursor + libinput) ---
+;; enum wlr_input_device_type: KEYBOARD=0 POINTER=1 TOUCH=2 ...
+(cstruct wlr-input-device "struct wlr_input_device"
+  (type "type" :type :int))
+
+(cstruct wlr-cursor "struct wlr_cursor"
+  (x "x" :type :double)
+  (y "y" :type :double)
+  (motion          "events.motion"          :type :pointer :count 2)
+  (motion-absolute "events.motion_absolute" :type :pointer :count 2)
+  (button          "events.button"          :type :pointer :count 2))
+
+(cstruct wlr-pointer-motion-event "struct wlr_pointer_motion_event"
+  (delta-x "delta_x" :type :double)
+  (delta-y "delta_y" :type :double))
+
+(cstruct wlr-pointer-button-event "struct wlr_pointer_button_event"
+  (button "button" :type :uint32)
+  (state  "state"  :type :int))   ; 1 = pressed
+
+(cstruct wlr-keyboard "struct wlr_keyboard"
+  (key "events.key" :type :pointer :count 2))
+
+(cstruct wlr-keyboard-key-event "struct wlr_keyboard_key_event"
+  (keycode "keycode" :type :uint32)
+  (state   "state"   :type :int))   ; 1 = pressed

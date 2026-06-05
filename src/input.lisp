@@ -1,6 +1,6 @@
 ;;;; -*- Mode: lisp; indent-tabs-mode: nil -*-
 ;;;
-;;; input.lisp --- Milestone 3: multiple windows, placement, and a seat
+;;; input.lisp --- multiple windows, placement, and a seat
 ;;;
 ;;; MIT license.
 ;;;
@@ -8,7 +8,7 @@
 ;;; advertises a wl_seat (pointer + keyboard) so input-capable clients can bind
 ;;; it.  Each window's placement is done in its own map closure -- the scene
 ;;; tree for that window is captured lexically.  (Real input *events* need
-;;; physical devices, which arrive with the DRM backend in M4.)
+;;; physical devices.)
 
 (in-package #:lispwc)
 
@@ -16,7 +16,7 @@
 (defvar *target-clients* 1)
 (defvar *placed* 0)
 
-(defun m3-on-frame (listener data)
+(defun multi-on-frame (listener data)
   (declare (ignore listener data))
   (unless (cffi:null-pointer-p *scene-output*)
     (wlr-scene-output-commit *scene-output* (cffi:null-pointer))
@@ -34,7 +34,7 @@
      (wl-display-terminate *display*))
     (t (wlr-output-schedule-frame *output*))))
 
-(defun m3-on-new-output (listener data)
+(defun multi-on-new-output (listener data)
   (declare (ignore listener))
   (setf *output* data)
   (wlr-output-init-render *output* *allocator* *renderer*)
@@ -46,10 +46,10 @@
     (wlr-output-state-finish state))
   (setf *scene-output* (wlr-scene-output-create *scene* *output*))
   (add-listener (cffi:foreign-slot-pointer *output* '(:struct wlr-output) 'frame)
-                #'m3-on-frame)
+                #'multi-on-frame)
   (wlr-output-schedule-frame *output*))
 
-(defun m3-on-new-toplevel (listener data)
+(defun multi-on-new-toplevel (listener data)
   (declare (ignore listener))
   (let* ((toplevel data)
          (base    (cffi:foreign-slot-value toplevel '(:struct wlr-xdg-toplevel) 'base))
@@ -96,9 +96,9 @@ number of windows hosted."
             *seat* (logior +wl-seat-capability-pointer+ +wl-seat-capability-keyboard+))
            (let ((xdg (wlr-xdg-shell-create *display* 3)))
              (add-listener (cffi:foreign-slot-pointer xdg '(:struct wlr-xdg-shell) 'new-toplevel)
-                           #'m3-on-new-toplevel))
+                           #'multi-on-new-toplevel))
            (add-listener (cffi:foreign-slot-pointer backend '(:struct wlr-backend) 'new-output)
-                         #'m3-on-new-output)
+                         #'multi-on-new-output)
            (unless (wlr-backend-start backend) (error "backend start failed"))
            (wlr-headless-add-output backend 1280 720)
            (let ((socket (wl-display-add-socket-auto *display*)))
@@ -109,7 +109,7 @@ number of windows hosted."
                (push (uiop:launch-program
                       (list "/bin/sh" "-c"
                             (format nil "WAYLAND_DISPLAY=~A exec ~A" socket client))
-                      :output t :error-output t)
+                      :output :interactive :error-output :interactive)
                      procs)))
            (format t "~&running event loop...~%") (finish-output)
            (wl-display-run *display*))

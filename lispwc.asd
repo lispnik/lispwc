@@ -2,9 +2,8 @@
 ;;;
 ;;; lispwc.asd --- A minimal Wayland compositor in Common Lisp (wlroots)
 ;;;
-;;; Milestone 1: headless bring-up.  wl_display + headless backend + one output
-;;; + a wlr_scene solid-color frame loop, with every wl_listener wired as a
-;;; libffi closure (cffi-callback-closures).  Linux + wlroots 0.19.
+;;; Every wl_listener callback is a libffi closure (cffi-callback-closures).
+;;; Linux + wlroots 0.19.
 
 (in-package :asdf)
 
@@ -23,4 +22,5 @@
                              (:file "main")
                              (:file "xdg")
                              (:file "input")
-                             (:file "drm")))))
+                             (:file "drm")
+                             (:file "events")))))

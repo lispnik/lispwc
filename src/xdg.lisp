@@ -1,6 +1,6 @@
 ;;;; -*- Mode: lisp; indent-tabs-mode: nil -*-
 ;;;
-;;; xdg.lisp --- Milestone 2: host a real Wayland client via xdg-shell
+;;; xdg.lisp --- host a real Wayland client via xdg-shell
 ;;;
 ;;; MIT license.
 ;;;
@@ -15,7 +15,7 @@
 (defvar *client-proc* nil)
 (defvar *timeout-frames* 600)
 
-(defun m2-on-frame (listener data)
+(defun xdg-on-frame (listener data)
   (declare (ignore listener data))
   (unless (cffi:null-pointer-p *scene-output*)
     (wlr-scene-output-commit *scene-output* (cffi:null-pointer))
@@ -33,7 +33,7 @@
      (wl-display-terminate *display*))
     (t (wlr-output-schedule-frame *output*))))
 
-(defun m2-on-new-output (listener data)
+(defun xdg-on-new-output (listener data)
   (declare (ignore listener))
   (setf *output* data)
   (wlr-output-init-render *output* *allocator* *renderer*)
@@ -45,10 +45,10 @@
     (wlr-output-state-finish state))
   (setf *scene-output* (wlr-scene-output-create *scene* *output*))
   (add-listener (cffi:foreign-slot-pointer *output* '(:struct wlr-output) 'frame)
-                #'m2-on-frame)
+                #'xdg-on-frame)
   (wlr-output-schedule-frame *output*))
 
-(defun m2-on-new-toplevel (listener data)
+(defun xdg-on-new-toplevel (listener data)
   "A client created an xdg toplevel.  Add it to the scene and wire its commit
 and map listeners as closures over this toplevel/surface."
   (declare (ignore listener))
@@ -94,9 +94,9 @@ window.  Returns the number of surfaces mapped."
          (wlr-data-device-manager-create *display*)
          (let ((xdg (wlr-xdg-shell-create *display* 3)))
            (add-listener (cffi:foreign-slot-pointer xdg '(:struct wlr-xdg-shell) 'new-toplevel)
-                         #'m2-on-new-toplevel))
+                         #'xdg-on-new-toplevel))
          (add-listener (cffi:foreign-slot-pointer backend '(:struct wlr-backend) 'new-output)
-                       #'m2-on-new-output)
+                       #'xdg-on-new-output)
          (unless (wlr-backend-start backend) (error "backend start failed"))
          (wlr-headless-add-output backend 1280 720)
          (let ((socket (wl-display-add-socket-auto *display*)))
@@ -107,7 +107,7 @@ window.  Returns the number of surfaces mapped."
                  (uiop:launch-program
                   (list "/bin/sh" "-c"
                         (format nil "WAYLAND_DISPLAY=~A exec ~A" socket client))
-                  :output t :error-output t)))
+                  :output :interactive :error-output :interactive)))
          (format t "~&running event loop...~%") (finish-output)
          (wl-display-run *display*))
     (when *client-proc* (ignore-errors (uiop:terminate-process *client-proc* :urgent t)))

@@ -1,6 +1,6 @@
 ;;;; -*- Mode: lisp; indent-tabs-mode: nil -*-
 ;;;
-;;; drm.lisp --- Milestone 4: drive the real display via the DRM backend
+;;; drm.lisp --- drive the real display via the DRM backend
 ;;;
 ;;; MIT license.
 ;;;

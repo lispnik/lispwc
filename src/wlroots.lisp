@@ -1,6 +1,6 @@
 ;;;; -*- Mode: lisp; indent-tabs-mode: nil -*-
 ;;;
-;;; wlroots.lisp --- wlroots 0.19 bindings (the subset milestone 1 needs)
+;;; wlroots.lisp --- wlroots 0.19 bindings (the subset we use)
 ;;;
 ;;; MIT license.
 
@@ -19,7 +19,7 @@
 (cffi:defcfun ("wlr_headless_backend_create" wlr-headless-backend-create) :pointer
   (loop :pointer))
 (cffi:defcfun ("wlr_backend_start" wlr-backend-start) :bool (backend :pointer))
-;; M4: real backend (DRM/libinput, X11/Wayland nested) chosen automatically
+;; real backend (DRM/libinput, X11/Wayland nested) chosen automatically
 (cffi:defcfun ("wlr_backend_autocreate" wlr-backend-autocreate) :pointer
   (loop :pointer) (session-ptr :pointer))
 (cffi:defcfun ("wlr_headless_add_output" wlr-headless-add-output) :pointer
@@ -63,7 +63,7 @@
 (cffi:defcfun ("wlr_scene_output_send_frame_done" wlr-scene-output-send-frame-done) :void
   (scene-output :pointer) (now :pointer))
 
-;; render-to-buffer + readback (M1.5)
+;; render-to-buffer + readback
 (cffi:defcfun ("wlr_allocator_create_buffer" wlr-allocator-create-buffer) :pointer
   (alloc :pointer) (width :int) (height :int) (format :pointer))
 (cffi:defcfun ("wlr_buffer_drop" wlr-buffer-drop) :void (buffer :pointer))
@@ -78,7 +78,7 @@
   (buffer :pointer))
 (defconstant +wlr-buffer-data-ptr-access-read+ 1)
 
-;; M2: compositor globals + xdg-shell
+;; compositor globals + xdg-shell
 (cffi:defcfun ("wlr_compositor_create" wlr-compositor-create) :pointer
   (display :pointer) (version :uint32) (renderer :pointer))
 (cffi:defcfun ("wlr_subcompositor_create" wlr-subcompositor-create) :pointer
@@ -92,7 +92,7 @@
 (cffi:defcfun ("wlr_xdg_toplevel_set_size" wlr-xdg-toplevel-set-size) :uint32
   (toplevel :pointer) (width :int32) (height :int32))
 
-;; M3: window placement + a seat global
+;; window placement + a seat global
 (cffi:defcfun ("wlr_scene_node_set_position" wlr-scene-node-set-position) :void
   (node :pointer) (x :int) (y :int))
 (cffi:defcfun ("wlr_seat_create" wlr-seat-create) :pointer
@@ -101,6 +101,21 @@
   (seat :pointer) (capabilities :uint32))
 (defconstant +wl-seat-capability-pointer+ 1)
 (defconstant +wl-seat-capability-keyboard+ 2)
+
+;; input: cursor, output layout, keyboard
+(cffi:defcfun ("wlr_cursor_create" wlr-cursor-create) :pointer)
+(cffi:defcfun ("wlr_cursor_attach_output_layout" wlr-cursor-attach-output-layout) :void
+  (cursor :pointer) (layout :pointer))
+(cffi:defcfun ("wlr_cursor_attach_input_device" wlr-cursor-attach-input-device) :void
+  (cursor :pointer) (device :pointer))
+(cffi:defcfun ("wlr_cursor_move" wlr-cursor-move) :void
+  (cursor :pointer) (device :pointer) (delta-x :double) (delta-y :double))
+(cffi:defcfun ("wlr_output_layout_create" wlr-output-layout-create) :pointer
+  (display :pointer))
+(cffi:defcfun ("wlr_output_layout_add_auto" wlr-output-layout-add-auto) :pointer
+  (layout :pointer) (output :pointer))
+(cffi:defcfun ("wlr_keyboard_from_input_device" wlr-keyboard-from-input-device) :pointer
+  (device :pointer))
 
 ;; clock for frame timestamps
 (cffi:defcfun ("clock_gettime" clock-gettime) :int (clk-id :int) (tp :pointer))
