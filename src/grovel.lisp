@@ -1,0 +1,88 @@
+;;;; -*- Mode: lisp; indent-tabs-mode: nil -*-
+;;;
+;;; grovel.lisp --- Struct offsets/sizes from the wlroots 0.19 + wayland headers
+;;;
+;;; MIT license.
+;;;
+;;; We only grovel the few things we touch: where to allocate a wl_listener and
+;;; set its notify; the offsets of the two wl_signals we listen on
+;;; (backend.events.new_output, output.events.frame); the size of
+;;; wlr_output_state (we stack-allocate it); and struct timespec.
+
+(in-package #:lispwc)
+
+(define "WLR_USE_UNSTABLE")
+(pkg-config-cflags "wlroots-0.19")
+(pkg-config-cflags "wayland-server")
+
+(include "wayland-server-core.h")
+(include "wlr/backend.h")
+(include "wlr/backend/headless.h")
+(include "wlr/render/wlr_renderer.h")
+(include "wlr/render/allocator.h")
+(include "wlr/types/wlr_output.h")
+(include "wlr/types/wlr_scene.h")
+(include "wlr/types/wlr_compositor.h")
+(include "wlr/types/wlr_xdg_shell.h")
+(include "wlr/util/log.h")
+(include "wlr/util/box.h")
+(include "wlr/render/pass.h")
+(include "wlr/render/drm_format_set.h")
+(include "drm_fourcc.h")
+(include "time.h")
+
+;; struct wl_listener { struct wl_list link; wl_notify_func_t notify; }
+;; link is at offset 0, so &listener->link == the listener pointer.
+(cstruct wl-listener "struct wl_listener"
+  (notify "notify" :type :pointer))
+
+;; A wl_signal is a single wl_list (two pointers) = 16 bytes; we size the slots
+;; with :count 2 so the offsets are right and grovel's size check is happy.
+(cstruct wlr-backend "struct wlr_backend"
+  (new-output "events.new_output" :type :pointer :count 2))
+
+(cstruct wlr-output "struct wlr_output"
+  (frame "events.frame" :type :pointer :count 2))
+
+;; size only (we wlr_output_state_init into a stack allocation)
+(cstruct wlr-output-state "struct wlr_output_state")
+
+(cstruct timespec "struct timespec"
+  (sec  "tv_sec"  :type :long)
+  (nsec "tv_nsec" :type :long))
+
+;;; --- M1.5: render-to-buffer + pixel readback ---
+(cstruct wlr-drm-format "struct wlr_drm_format"
+  (format    "format"    :type :uint32)
+  (len       "len"       :type :unsigned-long)
+  (capacity  "capacity"  :type :unsigned-long)
+  (modifiers "modifiers" :type :pointer))
+
+(cstruct wlr-render-rect-options "struct wlr_render_rect_options"
+  (box-x      "box.x"      :type :int)
+  (box-y      "box.y"      :type :int)
+  (box-width  "box.width"  :type :int)
+  (box-height "box.height" :type :int)
+  (r "color.r" :type :float)
+  (g "color.g" :type :float)
+  (b "color.b" :type :float)
+  (a "color.a" :type :float)
+  (clip "clip" :type :pointer)
+  (blend "blend_mode" :type :int))
+
+(constant (+drm-format-xrgb8888+ "DRM_FORMAT_XRGB8888"))
+
+;;; --- M2: xdg-shell ---
+(cstruct wlr-xdg-shell "struct wlr_xdg_shell"
+  (new-toplevel "events.new_toplevel" :type :pointer :count 2))
+
+(cstruct wlr-xdg-toplevel "struct wlr_xdg_toplevel"
+  (base "base" :type :pointer))
+
+(cstruct wlr-xdg-surface "struct wlr_xdg_surface"
+  (surface        "surface"        :type :pointer)
+  (initial-commit "initial_commit" :type :uint8))   ; C _Bool, 1 byte
+
+(cstruct wlr-surface "struct wlr_surface"
+  (commit "events.commit" :type :pointer :count 2)
+  (map    "events.map"    :type :pointer :count 2))
