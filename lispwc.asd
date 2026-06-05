@@ -21,4 +21,6 @@
                              (:file "wayland")
                              (:file "wlroots")
                              (:file "main")
-                             (:file "xdg")))))
+                             (:file "xdg")
+                             (:file "input")
+                             (:file "drm")))))

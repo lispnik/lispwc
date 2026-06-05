@@ -42,6 +42,32 @@ new_toplevel: a client created a window
 done. surfaces mapped: 1
 ```
 
+**M3 — multiple windows + placement + a seat** ✅  `(run-multi :clients 2)`
+hosts several clients at once, tiling each at its own position (each window
+placed in its own `map` closure), and advertises a `wl_seat`:
+
+```
+new_toplevel #1 -> window mapped, placed at (0,40); total 1
+new_toplevel #2 -> window mapped, placed at (340,40); total 2
+done. windows hosted: 2
+```
+
+**M4 — drive the real display (DRM/KMS)** ✅ (to the hardware boundary)
+`(run-drm)` uses `wlr_backend_autocreate`. Run as root on the Pi over SSH it
+got DRM master via libseat's **builtin** backend, brought up the **real V3D GPU
+with a GLES2 renderer**, and enumerated the actual HDMI connectors:
+
+```
+[libseat] Seat opened with backend 'builtin'
+[backend/drm] Initializing DRM backend for /dev/dri/card1 (vc4)
+[render/gles2] Creating GLES2 renderer ... GL renderer: V3D 4.2.14.0
+[backend/drm] Found connector 'HDMI-A-1'
+```
+
+The full init path works from Lisp; it fills the screen blue once a monitor is
+attached (the Pi under test had both HDMI connectors `disconnected`, so
+`new_output` never fired — plug in a display and rerun).
+
 These prove the whole chain works from Lisp: headless backend → event loop →
 output → `wlr_scene` rendering (correct pixels) → a real client connecting over
 the protocol and being composited — **all of it driven by `wl_listener`
@@ -100,6 +126,15 @@ WLR_RENDERER=pixman sbcl --eval '(asdf:load-system :lispwc)' \
 export XDG_RUNTIME_DIR=$(mktemp -d)
 WLR_RENDERER=pixman sbcl --eval '(asdf:load-system :lispwc)' \
      --eval '(lispwc:run-with-client :client "weston-simple-shm")'
+
+# multiple tiled windows (M3)
+WLR_RENDERER=pixman sbcl --eval '(asdf:load-system :lispwc)' \
+     --eval '(lispwc:run-multi :clients 2)'
+
+# drive the real monitor (M4) -- needs DRM master, so run as root (or on the
+# console) with a display plugged in:
+sudo env CPATH="$PWD/protocols" WLR_BACKENDS=drm \
+     sbcl --eval '(asdf:load-system :lispwc)' --eval '(lispwc:run-drm)'
 ```
 
 (Force software rendering with `WLR_RENDERER=pixman` when there's no usable GPU
@@ -110,9 +145,10 @@ display; it's also what makes the M1.5 readback buffer CPU-mappable.)
 - **M1 — headless bring-up** ✅
 - **M1.5 — render-and-readback (correct pixels)** ✅
 - **M2 — `xdg-shell`: host a real Wayland client** ✅
-- **M3** — input: `wlr_cursor` + `wlr_seat` + keyboard/pointer focus, and
-  multiple windows with placement
-- **M4** — run on the Pi's actual display via the DRM backend (libseat)
+- **M3 — multiple windows + placement + `wl_seat`** ✅
+- **M4 — DRM backend on the real GPU (lights up an attached monitor)** ✅
+- **next** — real input *events* via `wlr_cursor` + libinput (keyboard/pointer
+  focus) once running on a console with devices
 
 ## License
 

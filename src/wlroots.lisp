@@ -19,6 +19,9 @@
 (cffi:defcfun ("wlr_headless_backend_create" wlr-headless-backend-create) :pointer
   (loop :pointer))
 (cffi:defcfun ("wlr_backend_start" wlr-backend-start) :bool (backend :pointer))
+;; M4: real backend (DRM/libinput, X11/Wayland nested) chosen automatically
+(cffi:defcfun ("wlr_backend_autocreate" wlr-backend-autocreate) :pointer
+  (loop :pointer) (session-ptr :pointer))
 (cffi:defcfun ("wlr_headless_add_output" wlr-headless-add-output) :pointer
   (backend :pointer) (width :uint) (height :uint))
 
@@ -40,6 +43,10 @@
   (state :pointer) (enabled :bool))
 (cffi:defcfun ("wlr_output_state_set_custom_mode" wlr-output-state-set-custom-mode) :void
   (state :pointer) (width :int32) (height :int32) (refresh :int32))  ; refresh in mHz
+(cffi:defcfun ("wlr_output_preferred_mode" wlr-output-preferred-mode) :pointer
+  (output :pointer))
+(cffi:defcfun ("wlr_output_state_set_mode" wlr-output-state-set-mode) :void
+  (state :pointer) (mode :pointer))
 (cffi:defcfun ("wlr_output_commit_state" wlr-output-commit-state) :bool
   (output :pointer) (state :pointer))
 (cffi:defcfun ("wlr_output_schedule_frame" wlr-output-schedule-frame) :void
@@ -84,6 +91,16 @@
   (parent :pointer) (xdg-surface :pointer))
 (cffi:defcfun ("wlr_xdg_toplevel_set_size" wlr-xdg-toplevel-set-size) :uint32
   (toplevel :pointer) (width :int32) (height :int32))
+
+;; M3: window placement + a seat global
+(cffi:defcfun ("wlr_scene_node_set_position" wlr-scene-node-set-position) :void
+  (node :pointer) (x :int) (y :int))
+(cffi:defcfun ("wlr_seat_create" wlr-seat-create) :pointer
+  (display :pointer) (name :string))
+(cffi:defcfun ("wlr_seat_set_capabilities" wlr-seat-set-capabilities) :void
+  (seat :pointer) (capabilities :uint32))
+(defconstant +wl-seat-capability-pointer+ 1)
+(defconstant +wl-seat-capability-keyboard+ 2)
 
 ;; clock for frame timestamps
 (cffi:defcfun ("clock_gettime" clock-gettime) :int (clk-id :int) (tp :pointer))
