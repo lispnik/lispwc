@@ -135,6 +135,16 @@
   (seat :pointer))
 (cffi:defcfun ("wlr_seat_pointer_notify_button" wlr-seat-pointer-notify-button) :uint32
   (seat :pointer) (time-msec :uint32) (button :uint32) (state :int))
+;; keyboard focus
+(cffi:defcfun ("wlr_seat_set_keyboard" wlr-seat-set-keyboard) :void
+  (seat :pointer) (keyboard :pointer))
+(cffi:defcfun ("wlr_seat_keyboard_notify_enter" wlr-seat-keyboard-notify-enter) :void
+  (seat :pointer) (surface :pointer) (keycodes :pointer)
+  (num-keycodes :unsigned-long) (modifiers :pointer))
+(cffi:defcfun ("wlr_seat_keyboard_notify_key" wlr-seat-keyboard-notify-key) :void
+  (seat :pointer) (time-msec :uint32) (key :uint32) (state :uint32))
+(cffi:defcfun ("wlr_seat_keyboard_clear_focus" wlr-seat-keyboard-clear-focus) :void
+  (seat :pointer))
 
 ;; clock for frame timestamps
 (cffi:defcfun ("clock_gettime" clock-gettime) :int (clk-id :int) (tp :pointer))

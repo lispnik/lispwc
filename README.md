@@ -91,17 +91,24 @@ key keycode 30 pressed/released       (KEY_A)
 
 So libinput → `wlr_cursor`/`wlr_keyboard` → Lisp closure is proven end-to-end.
 
-**Cursor focus to surfaces** — `(run-focus)`: `update-pointer-focus` finds the
-scene node under the cursor (`wlr_scene_node_at`), resolves it to a
-`wlr_surface`, and gives it the seat's pointer focus (enter + motion), clearing
-focus when the cursor is over nothing. Verified by hosting a client and warping
-the cursor on/off its window, reading back `seat->pointer_state.focused_surface`:
+**Cursor + keyboard focus** — `(run-focus)`. Pointer focus:
+`update-pointer-focus` finds the scene node under the cursor
+(`wlr_scene_node_at`), resolves it to a `wlr_surface`, and gives it the seat's
+pointer focus (enter + motion), clearing focus over empty space. Keyboard
+focus: click-to-focus gives the surface the seat's keyboard focus
+(`wlr_seat_keyboard_notify_enter`) and forwards keys to it
+(`wlr_seat_keyboard_notify_key`). Verified by hosting a client and warping the
+cursor on/off its window, reading back `seat->pointer_state.focused_surface` and
+`seat->keyboard_state.focused_surface`:
 
 ```
 client mapped at (100,100)
 INSIDE  cursor (150,150): node-surface=yes  seat-focus=set   MATCH
 OUTSIDE cursor (5,5):     node-surface=none seat-focus=NULL  MATCH
   sent BTN_LEFT press to focused surface
+  keyboard focus -> set  MATCH
+  forwarded key 30 (KEY_A) to keyboard-focused surface
+  keyboard focus cleared -> NULL (ok)
 ```
 
 Together these exercise the whole chain from Lisp: backend → event loop →
@@ -184,9 +191,9 @@ display; it's also what makes the readback buffer CPU-mappable.)
 
 ## Possible next steps
 
-- keyboard focus via `wlr_seat` (enter/leave, key forwarding to the focused
-  surface), to go with the cursor focus already in place
-- window interaction (move/resize, click-to-focus) using the input events
+- wire the libinput motion/key handlers (`run-input`) into the focus logic so a
+  real mouse/keyboard drives focus, not just the scripted warps
+- window interaction (move/resize, drag) using the input events
 - show it on a real monitor end-to-end (DRM backend + a connected display)
 
 ## License

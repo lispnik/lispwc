@@ -44,6 +44,15 @@ Returns the focused wlr_surface pointer, or NIL."
 (defun seat-focus ()
   (cffi:foreign-slot-value *seat-f* '(:struct wlr-seat) 'focused-surface))
 
+(defun seat-kbd-focus ()
+  (cffi:foreign-slot-value *seat-f* '(:struct wlr-seat) 'kbd-focused-surface))
+
+(defun focus-keyboard (surface)
+  "Give SURFACE the seat's keyboard focus (no held keys, no modifiers)."
+  (cffi:with-foreign-object (mods :uint32 4)         ; zeroed wlr_keyboard_modifiers
+    (dotimes (i 4) (setf (cffi:mem-aref mods :uint32 i) 0))
+    (wlr-seat-keyboard-notify-enter *seat-f* surface (cffi:null-pointer) 0 mods)))
+
 (defun focus-on-new-output (listener data)
   (declare (ignore listener))
   (setf *output* data)
@@ -105,8 +114,20 @@ Returns the focused wlr_surface pointer, or NIL."
           (report-focus "INSIDE " 200 200)
           (let ((serial (wlr-seat-pointer-notify-button *seat-f* *frames* 272 1)))
             (format t "  sent BTN_LEFT press to focused surface (serial ~D)~%" serial))
+          ;; click-to-focus the keyboard onto the clicked surface
+          (focus-keyboard *client-surface*)
+          (format t "  keyboard focus -> ~:[NULL~;set~]~@[  MATCH~]~%"
+                  (not (cffi:null-pointer-p (seat-kbd-focus)))
+                  (cffi:pointer-eq (seat-kbd-focus) *client-surface*))
+          (wlr-seat-keyboard-notify-key *seat-f* *frames* 30 1)   ; forward KEY_A press
+          (wlr-seat-keyboard-notify-key *seat-f* *frames* 30 0)   ; ...and release
+          (format t "  forwarded key 30 (KEY_A) to keyboard-focused surface~%")
           (finish-output))
-      (30 (wl-display-terminate *display*))))
+      (28 (wlr-seat-keyboard-clear-focus *seat-f*)
+          (format t "  keyboard focus cleared -> ~A~%"
+                  (if (cffi:null-pointer-p (seat-kbd-focus)) "NULL (ok)" "STILL SET (!)"))
+          (finish-output))
+      (32 (wl-display-terminate *display*))))
   (when (> *frames* 400) (wl-display-terminate *display*))
   (when (and *output* (not (cffi:null-pointer-p *output*)))
     (wlr-output-schedule-frame *output*)))
@@ -130,7 +151,8 @@ seat's pointer focus follows the cursor."
            (wlr-subcompositor-create *display*)
            (wlr-data-device-manager-create *display*)
            (setf *seat-f* (wlr-seat-create *display* "seat0"))
-           (wlr-seat-set-capabilities *seat-f* +wl-seat-capability-pointer+)
+           (wlr-seat-set-capabilities
+            *seat-f* (logior +wl-seat-capability-pointer+ +wl-seat-capability-keyboard+))
            (setf *focus-cursor* (wlr-cursor-create))
            (let ((xdg (wlr-xdg-shell-create *display* 3)))
              (add-listener (cffi:foreign-slot-pointer xdg '(:struct wlr-xdg-shell) 'new-toplevel)

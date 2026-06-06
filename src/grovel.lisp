@@ -127,4 +127,5 @@
 (cstruct wlr-scene-surface "struct wlr_scene_surface"
   (surface "surface" :type :pointer))
 (cstruct wlr-seat "struct wlr_seat"
-  (focused-surface "pointer_state.focused_surface" :type :pointer))
+  (focused-surface     "pointer_state.focused_surface"  :type :pointer)
+  (kbd-focused-surface "keyboard_state.focused_surface" :type :pointer))
