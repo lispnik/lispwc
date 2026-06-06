@@ -119,3 +119,12 @@
 (cstruct wlr-keyboard-key-event "struct wlr_keyboard_key_event"
   (keycode "keycode" :type :uint32)
   (state   "state"   :type :int))   ; 1 = pressed
+
+;;; --- cursor focus to surfaces ---
+;; enum wlr_scene_node_type: TREE=0 RECT=1 BUFFER=2
+(cstruct wlr-scene-node "struct wlr_scene_node"
+  (type "type" :type :int))
+(cstruct wlr-scene-surface "struct wlr_scene_surface"
+  (surface "surface" :type :pointer))
+(cstruct wlr-seat "struct wlr_seat"
+  (focused-surface "pointer_state.focused_surface" :type :pointer))

@@ -117,6 +117,25 @@
 (cffi:defcfun ("wlr_keyboard_from_input_device" wlr-keyboard-from-input-device) :pointer
   (device :pointer))
 
+;; cursor focus to surfaces: find the surface under the cursor + notify the seat
+(defconstant +scene-node-buffer+ 2)   ; enum wlr_scene_node_type: TREE,RECT,BUFFER
+(cffi:defcfun ("wlr_scene_node_at" wlr-scene-node-at) :pointer
+  (node :pointer) (lx :double) (ly :double) (nx :pointer) (ny :pointer))
+(cffi:defcfun ("wlr_scene_buffer_from_node" wlr-scene-buffer-from-node) :pointer
+  (node :pointer))
+(cffi:defcfun ("wlr_scene_surface_try_from_buffer" wlr-scene-surface-try-from-buffer) :pointer
+  (buffer :pointer))
+(cffi:defcfun ("wlr_cursor_warp" wlr-cursor-warp) :bool
+  (cursor :pointer) (device :pointer) (lx :double) (ly :double))
+(cffi:defcfun ("wlr_seat_pointer_notify_enter" wlr-seat-pointer-notify-enter) :void
+  (seat :pointer) (surface :pointer) (sx :double) (sy :double))
+(cffi:defcfun ("wlr_seat_pointer_notify_motion" wlr-seat-pointer-notify-motion) :void
+  (seat :pointer) (time-msec :uint32) (sx :double) (sy :double))
+(cffi:defcfun ("wlr_seat_pointer_clear_focus" wlr-seat-pointer-clear-focus) :void
+  (seat :pointer))
+(cffi:defcfun ("wlr_seat_pointer_notify_button" wlr-seat-pointer-notify-button) :uint32
+  (seat :pointer) (time-msec :uint32) (button :uint32) (state :int))
+
 ;; clock for frame timestamps
 (cffi:defcfun ("clock_gettime" clock-gettime) :int (clk-id :int) (tp :pointer))
 (defconstant +clock-monotonic+ 1)

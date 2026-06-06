@@ -23,4 +23,5 @@
                              (:file "xdg")
                              (:file "input")
                              (:file "drm")
-                             (:file "events")))))
+                             (:file "events")
+                             (:file "focus")))))

@@ -91,6 +91,19 @@ key keycode 30 pressed/released       (KEY_A)
 
 So libinput → `wlr_cursor`/`wlr_keyboard` → Lisp closure is proven end-to-end.
 
+**Cursor focus to surfaces** — `(run-focus)`: `update-pointer-focus` finds the
+scene node under the cursor (`wlr_scene_node_at`), resolves it to a
+`wlr_surface`, and gives it the seat's pointer focus (enter + motion), clearing
+focus when the cursor is over nothing. Verified by hosting a client and warping
+the cursor on/off its window, reading back `seat->pointer_state.focused_surface`:
+
+```
+client mapped at (100,100)
+INSIDE  cursor (150,150): node-surface=yes  seat-focus=set   MATCH
+OUTSIDE cursor (5,5):     node-surface=none seat-focus=NULL  MATCH
+  sent BTN_LEFT press to focused surface
+```
+
 Together these exercise the whole chain from Lisp: backend → event loop →
 output → `wlr_scene` rendering (correct pixels) → a real client connecting over
 the protocol and being composited → input from real devices — **all of it
@@ -171,7 +184,8 @@ display; it's also what makes the readback buffer CPU-mappable.)
 
 ## Possible next steps
 
-- cursor focus / enter-leave to surfaces, and keyboard focus via `wlr_seat`
+- keyboard focus via `wlr_seat` (enter/leave, key forwarding to the focused
+  surface), to go with the cursor focus already in place
 - window interaction (move/resize, click-to-focus) using the input events
 - show it on a real monitor end-to-end (DRM backend + a connected display)
 
