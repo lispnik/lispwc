@@ -26,4 +26,6 @@
                              (:file "events")
                              (:file "focus")
                              (:file "live-focus")
-                             (:file "move-resize")))))
+                             (:file "move-resize")
+                             (:file "stack")
+                             (:file "console")))))

@@ -156,6 +156,31 @@ position straight back. Resize is the compositor asking the client for a size
 window's pixels follow is up to the client — `weston-simple-shm` keeps its
 buffer fixed).
 
+**Click-to-raise + window stacking** — `(run-stack)`. A small window registry
+plus `raise-window-at`: resolve the surface under a point (`wlr_scene_node_at`
+→ `wlr_scene_surface`) and raise its scene tree with
+`wlr_scene_node_raise_to_top`. Two overlapping windows; clicking the exposed
+part of the lower one raises it above the other, which is confirmed by the
+topmost surface in the overlap flipping:
+
+```
+window 1 mapped at (100,100), size 250x250
+window 2 mapped at (250,250), size 250x250
+before raise:  top window at (300,300): window 2     (created last => on top)
+click at (150,150) -> raised window 1                (clicked its exposed corner)
+after raise:   top window at (300,300): window 1     (stacking order changed)
+```
+
+**The whole thing, interactive** — `(run-console)` ties the pieces together on
+the *real* backend (`wlr_backend_autocreate` → DRM/KMS + libinput): pointer
+focus follows the cursor, a click raises + focuses the window under it,
+left-drag moves and right-drag resizes, and keys go to the focused window — see
+[Running on a real console from scratch](#running-on-a-real-console-from-scratch).
+On the test Pi it brought up the seat, the DRM backend, the V3D GLES2 renderer,
+**wired the real input devices through the Lisp closures**, enumerated the HDMI
+connectors, and opened a socket — everything up to `new_output`, which (as with
+`run-drm`) needs a connected monitor to fire.
+
 Together these exercise the whole chain from Lisp: backend → event loop →
 output → `wlr_scene` rendering (correct pixels) → a real client connecting over
 the protocol and being composited → input from real devices — **all of it
@@ -237,6 +262,10 @@ sudo env CPATH="$PWD/protocols" WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d)
      sbcl --eval '(asdf:load-system :lispwc)' \
      --eval '(lispwc:run-move-resize :injector "/tmp/inject-drag")'
 
+# click-to-raise + window stacking (two overlapping windows, headless)
+WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
+     sbcl --eval '(asdf:load-system :lispwc)' --eval '(lispwc:run-stack)'
+
 # drive the real monitor -- needs DRM master, so run as root (or on the
 # console) with a display plugged in:
 sudo env CPATH="$PWD/protocols" WLR_BACKENDS=drm \
@@ -246,10 +275,62 @@ sudo env CPATH="$PWD/protocols" WLR_BACKENDS=drm \
 (Force software rendering with `WLR_RENDERER=pixman` when there's no usable GPU
 display; it's also what makes the readback buffer CPU-mappable.)
 
+## Running on a real console from scratch
+
+The demos above run headless over SSH. To drive a **real monitor with a real
+mouse and keyboard**, run `(run-console)` from a Linux **text console** (a VT),
+where it can take DRM master and open a seat. The whole interactive compositor
+— pointer focus, click-to-raise + focus, left-drag move, right-drag resize, keys
+to the focused window — runs there. On the Raspberry Pi 4 test box:
+
+1. **Get to a bare VT** with nothing else owning the GPU. If a desktop or display
+   manager is running, stop it (or just switch to a free VT and log in):
+   ```sh
+   sudo systemctl stop lightdm        # or gdm/sddm — skip if you booted to console
+   sudo chvt 3                         # or press Ctrl-Alt-F3, then log in
+   ```
+2. **Install** wlroots 0.19 and a test client (`weston` ships `weston-simple-shm`):
+   ```sh
+   sudo apt install libwlroots-0.19-dev weston sbcl
+   ```
+3. **Generate the protocol header** and put it on the compiler's include path
+   (needed the first time the grovel file compiles):
+   ```sh
+   cd lispwc
+   ./protocols/generate.sh
+   export CPATH="$PWD/protocols"
+   ```
+4. **Run it.** The simplest way to get DRM master + a seat is as root — wlroots'
+   builtin libseat backend then opens the seat without a login session:
+   ```sh
+   sudo env CPATH="$PWD/protocols" XDG_RUNTIME_DIR=$(mktemp -d) \
+        sbcl --eval '(asdf:load-system :lispwc)' \
+             --eval '(lispwc:run-console :clients (list "weston-simple-shm" "weston-simple-shm"))'
+   ```
+   The monitor switches to a dim background with the client windows on it. Move
+   the mouse to move pointer focus; **click** a window to raise + focus it;
+   **left-drag** to move it; **right-drag** to resize it; **type** to send keys
+   to the focused window.
+5. **Quit** with **Ctrl-C** (or kill SBCL from another VT). Restore your desktop
+   with `sudo chvt 1` / restarting the display manager.
+
+Notes:
+
+- **Unprivileged instead of root:** install **seatd** (`sudo apt install seatd &&
+  sudo systemctl enable --now seatd`, then add yourself to the `seat` group) or
+  run under a logind login session — wlroots' session code picks either up
+  automatically, no code change.
+- **No `new_output`?** The monitor isn't being detected — make sure it's
+  connected and powered *before* launching (KMS enumerates connectors at
+  startup). This is exactly where the test Pi stopped: both its HDMI ports read
+  `disconnected`, so the backend initialized fully but `new_output` never fired.
+- Add `WLR_RENDERER=pixman` to force software rendering if the GPU path misbehaves.
+
 ## Possible next steps
 
-- show it on a real monitor end-to-end (DRM backend + a connected display)
-- click-to-raise / window stacking across multiple windows
+- confirm `run-console` on a connected monitor end-to-end (the test Pi had none)
+- a cursor image (xcursor theme) instead of an invisible hit-test point
+- xdg-popups, multiple outputs, and minimize/maximize/fullscreen requests
 
 ## License
 

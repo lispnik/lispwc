@@ -103,6 +103,8 @@
 ;; window placement + a seat global
 (cffi:defcfun ("wlr_scene_node_set_position" wlr-scene-node-set-position) :void
   (node :pointer) (x :int) (y :int))
+(cffi:defcfun ("wlr_scene_node_raise_to_top" wlr-scene-node-raise-to-top) :void
+  (node :pointer))
 (cffi:defcfun ("wlr_seat_create" wlr-seat-create) :pointer
   (display :pointer) (name :string))
 (cffi:defcfun ("wlr_seat_set_capabilities" wlr-seat-set-capabilities) :void
