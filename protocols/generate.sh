@@ -12,3 +12,11 @@ dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
 xml="$(pkg-config --variable=pkgdatadir wayland-protocols)/stable/xdg-shell/xdg-shell.xml"
 wayland-scanner server-header "$xml" "$dir/xdg-shell-protocol.h"
 echo "generated $dir/xdg-shell-protocol.h"
+
+# wlr-layer-shell isn't in wayland-protocols (it's a wlroots protocol); the XML
+# is vendored alongside this script.  wlr/types/wlr_layer_shell_v1.h #includes
+# the generated server header.
+wayland-scanner server-header \
+  "$dir/wlr-layer-shell-unstable-v1.xml" \
+  "$dir/wlr-layer-shell-unstable-v1-protocol.h"
+echo "generated $dir/wlr-layer-shell-unstable-v1-protocol.h"

@@ -59,6 +59,10 @@
   (output :pointer) (state :pointer))
 (cffi:defcfun ("wlr_output_schedule_frame" wlr-output-schedule-frame) :void
   (output :pointer))
+;; advertise the output as a wl_output global so clients (e.g. layer-shell
+;; panels/backgrounds) can discover it
+(cffi:defcfun ("wlr_output_create_global" wlr-output-create-global) :void
+  (output :pointer) (display :pointer))
 
 ;; scene graph
 (cffi:defcfun ("wlr_scene_create" wlr-scene-create) :pointer)
@@ -105,6 +109,22 @@
   (node :pointer) (x :int) (y :int))
 (cffi:defcfun ("wlr_scene_node_raise_to_top" wlr-scene-node-raise-to-top) :void
   (node :pointer))
+(cffi:defcfun ("wlr_scene_node_lower_to_bottom" wlr-scene-node-lower-to-bottom) :void
+  (node :pointer))
+
+;; layer-shell: panels/backgrounds anchored to screen edges
+(cffi:defcfun ("wlr_layer_shell_v1_create" wlr-layer-shell-v1-create) :pointer
+  (display :pointer) (version :uint32))
+(cffi:defcfun ("wlr_scene_layer_surface_v1_create" wlr-scene-layer-surface-v1-create) :pointer
+  (parent :pointer) (layer-surface :pointer))
+;; positions the scene node per the surface's anchors/margins/exclusive-zone and
+;; sends the configure; full-area is the output box, usable-area is updated
+(cffi:defcfun ("wlr_scene_layer_surface_v1_configure" wlr-scene-layer-surface-v1-configure) :void
+  (scene-layer-surface :pointer) (full-area :pointer) (usable-area :pointer))
+(defconstant +layer-background+ 0)
+(defconstant +layer-bottom+ 1)
+(defconstant +layer-top+ 2)
+(defconstant +layer-overlay+ 3)
 (cffi:defcfun ("wlr_seat_create" wlr-seat-create) :pointer
   (display :pointer) (name :string))
 (cffi:defcfun ("wlr_seat_set_capabilities" wlr-seat-set-capabilities) :void

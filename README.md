@@ -197,6 +197,25 @@ client requested cursor: surface=set hotspot=(13,2) from-focused-client=T
 done. cursor requests honored: 1
 ```
 
+**Layer-shell (panels + backgrounds)** — `(run-layer)`. `wlr-layer-shell-v1` is
+the protocol backgrounds (swaybg), panels (waybar), and lock screens use to
+anchor surfaces to an output's edges in one of four layers (background < bottom
+< top < overlay). The handler assigns the surface our output, gives it a scene
+node in the right z-order (background/bottom behind the windows, top/overlay
+above), and lets the `wlr_scene` layer-surface helper do the
+anchor/margin/exclusive-zone math. Verified by hosting **swaybg** as a
+background:
+
+```
+socket wayland-0; launching swaybg -c 224488
+new layer surface: namespace=wallpaper layer=0
+layer surface MAPPED: namespace=wallpaper layer=0
+done. layer surfaces mapped: 1
+```
+
+(`run-console` advertises the same global, so a panel or wallpaper works on the
+real display too.)
+
 Together these exercise the whole chain from Lisp: backend → event loop →
 output → `wlr_scene` rendering (correct pixels) → a real client connecting over
 the protocol and being composited → input from real devices — **all of it
@@ -232,13 +251,14 @@ wayland-server, libdrm, pixman, EGL/GLES, libinput, etc. Plus `cffi`,
 
 ## Building
 
-wlroots' public headers `#include "xdg-shell-protocol.h"`, a wayland-scanner
-output Debian doesn't ship. Generate it and put it on the compiler's include
-path before building:
+wlroots' public headers `#include` wayland-scanner outputs Debian doesn't ship
+(`xdg-shell-protocol.h`, and `wlr-layer-shell-unstable-v1-protocol.h` from the
+XML vendored in `protocols/`). Generate them and put them on the compiler's
+include path before building:
 
 ```sh
-./protocols/generate.sh             # writes protocols/xdg-shell-protocol.h
-export CPATH="$PWD/protocols"       # so cffi-grovel's compiler finds it
+./protocols/generate.sh             # writes the two *-protocol.h headers
+export CPATH="$PWD/protocols"       # so cffi-grovel's compiler finds them
 ```
 
 ## Running
@@ -285,6 +305,10 @@ WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
 # honor a client's own cursor (wl_pointer.set_cursor); weston-flower sets one
 WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
      sbcl --eval '(asdf:load-system :lispwc)' --eval '(lispwc:run-cursor)'
+
+# layer-shell: host swaybg as a background (apt install swaybg)
+WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
+     sbcl --eval '(asdf:load-system :lispwc)' --eval '(lispwc:run-layer)'
 
 # drive the real monitor -- needs DRM master, so run as root (or on the
 # console) with a display plugged in:
@@ -352,7 +376,8 @@ Notes:
 
 - confirm `run-console` on a connected monitor end-to-end (the test Pi had none)
 - xdg-popups, multiple outputs, and minimize/maximize/fullscreen requests
-- a layer-shell for panels/backgrounds, and output hotplug handling
+- layer-shell exclusive zones reserving usable area for the windows below
+- output hotplug handling
 
 ## License
 

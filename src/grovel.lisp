@@ -24,6 +24,7 @@
 (include "wlr/types/wlr_scene.h")
 (include "wlr/types/wlr_compositor.h")
 (include "wlr/types/wlr_xdg_shell.h")
+(include "wlr/types/wlr_layer_shell_v1.h")
 (include "wlr/types/wlr_cursor.h")
 (include "wlr/types/wlr_output_layout.h")
 (include "wlr/types/wlr_input_device.h")
@@ -48,7 +49,9 @@
   (new-output "events.new_output" :type :pointer :count 2))
 
 (cstruct wlr-output "struct wlr_output"
-  (frame "events.frame" :type :pointer :count 2))
+  (frame  "events.frame" :type :pointer :count 2)
+  (width  "width"  :type :int32)        ; current mode resolution
+  (height "height" :type :int32))
 
 ;; size only (we wlr_output_state_init into a stack allocation)
 (cstruct wlr-output-state "struct wlr_output_state")
@@ -146,3 +149,22 @@
   (rsc-surface     "surface"     :type :pointer)   ; NULL means "hide the cursor"
   (rsc-hotspot-x   "hotspot_x"   :type :int32)
   (rsc-hotspot-y   "hotspot_y"   :type :int32))
+
+;;; --- layer-shell (panels, backgrounds: wlr-layer-shell-unstable-v1) ---
+(cstruct wlr-box "struct wlr_box"
+  (bx "x" :type :int) (by "y" :type :int)
+  (bw "width" :type :int) (bh "height" :type :int))
+
+(cstruct wlr-layer-shell-v1 "struct wlr_layer_shell_v1"
+  (new-surface "events.new_surface" :type :pointer :count 2))
+
+;; enum zwlr_layer_shell_v1_layer: BACKGROUND=0 BOTTOM=1 TOP=2 OVERLAY=3
+(cstruct wlr-layer-surface-v1 "struct wlr_layer_surface_v1"
+  (surface        "surface"        :type :pointer)
+  (output         "output"         :type :pointer)
+  (namespace      "namespace"      :type :pointer)   ; char*
+  (initial-commit "initial_commit" :type :uint8)
+  (pending-layer  "pending.layer"  :type :int))
+
+(cstruct wlr-scene-layer-surface-v1 "struct wlr_scene_layer_surface_v1"
+  (tree "tree" :type :pointer))

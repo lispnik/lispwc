@@ -152,6 +152,7 @@ pointer focus (so a background client can't hijack the cursor)."
           (wlr-output-state-set-mode state mode)))
     (wlr-output-commit-state *output* state)
     (wlr-output-state-finish state))
+  (wlr-output-create-global *output* *display*)   ; advertise wl_output (layer-shell needs it)
   (let ((layout (wlr-output-layout-create *display*)))
     (wlr-output-layout-add-auto layout *output*)
     (wlr-cursor-attach-output-layout *focus-cursor* layout))
@@ -210,6 +211,10 @@ launch CLIENTS.  Runs until you kill it (Ctrl-C / switch VT).  Needs DRM master
            (let ((xdg (wlr-xdg-shell-create *display* 3)))
              (add-listener (cffi:foreign-slot-pointer xdg '(:struct wlr-xdg-shell) 'new-toplevel)
                            #'console-on-new-toplevel))
+           ;; layer-shell: panels and backgrounds
+           (let ((layer-shell (wlr-layer-shell-v1-create *display* 4)))
+             (add-listener (cffi:foreign-slot-pointer layer-shell '(:struct wlr-layer-shell-v1) 'new-surface)
+                           #'layer-on-new-surface))
            (add-listener (cffi:foreign-slot-pointer backend '(:struct wlr-backend) 'new-output)
                          #'console-on-new-output)
            (add-listener (cffi:foreign-slot-pointer backend '(:struct wlr-backend) 'new-input)
