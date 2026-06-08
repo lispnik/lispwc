@@ -177,9 +177,10 @@ focus follows the cursor, a click raises + focuses the window under it,
 left-drag moves and right-drag resizes, and keys go to the focused window — see
 [Running on a real console from scratch](#running-on-a-real-console-from-scratch).
 On the test Pi it brought up the seat, the DRM backend, the V3D GLES2 renderer,
-**wired the real input devices through the Lisp closures**, enumerated the HDMI
-connectors, and opened a socket — everything up to `new_output`, which (as with
-`run-drm`) needs a connected monitor to fire.
+**wired the real input devices through the Lisp closures**, loaded an Xcursor
+theme so the pointer is a real arrow (`cursor theme loaded=T`), enumerated the
+HDMI connectors, and opened a socket — everything up to `new_output`, which (as
+with `run-drm`) needs a connected monitor to fire.
 
 Together these exercise the whole chain from Lisp: backend → event loop →
 output → `wlr_scene` rendering (correct pixels) → a real client connecting over
@@ -307,8 +308,10 @@ to the focused window — runs there. On the Raspberry Pi 4 test box:
         sbcl --eval '(asdf:load-system :lispwc)' \
              --eval '(lispwc:run-console :clients (list "weston-simple-shm" "weston-simple-shm"))'
    ```
-   The monitor switches to a dim background with the client windows on it. Move
-   the mouse to move pointer focus; **click** a window to raise + focus it;
+   The monitor switches to a dim background with the client windows on it, and
+   an arrow pointer (loaded from an Xcursor theme — `apt install adwaita-icon-theme`
+   if you have none). Move the mouse to move the pointer; **click** a window to
+   raise + focus it;
    **left-drag** to move it; **right-drag** to resize it; **type** to send keys
    to the focused window.
 5. **Quit** with **Ctrl-C** (or kill SBCL from another VT). Restore your desktop
@@ -329,7 +332,7 @@ Notes:
 ## Possible next steps
 
 - confirm `run-console` on a connected monitor end-to-end (the test Pi had none)
-- a cursor image (xcursor theme) instead of an invisible hit-test point
+- honor client cursor requests (`wl_pointer.set_cursor`) instead of always the arrow
 - xdg-popups, multiple outputs, and minimize/maximize/fullscreen requests
 
 ## License

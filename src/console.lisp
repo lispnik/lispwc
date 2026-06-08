@@ -23,6 +23,7 @@
 (defvar *cgrab-off-x* 0) (defvar *cgrab-off-y* 0)
 (defvar *cgrab-cx* 0d0)  (defvar *cgrab-cy* 0d0)
 (defvar *cgrab-sw* 0)    (defvar *cgrab-sh* 0)
+(defvar *cursor-mgr* nil)               ; xcursor theme manager
 
 (defun console-on-cursor-motion (listener data)
   (declare (ignore listener))
@@ -137,6 +138,10 @@
   (let ((layout (wlr-output-layout-create *display*)))
     (wlr-output-layout-add-auto layout *output*)
     (wlr-cursor-attach-output-layout *focus-cursor* layout))
+  ;; load the theme for this output's scale and show the default pointer
+  (let ((ok (wlr-xcursor-manager-load *cursor-mgr* 1.0)))
+    (wlr-cursor-set-xcursor *focus-cursor* *cursor-mgr* "default")
+    (format t "~&cursor theme loaded=~A~%" ok))
   (setf *scene-output* (wlr-scene-output-create *scene* *output*))
   ;; a dim background so the desktop is visible behind the windows
   (cffi:with-foreign-object (color :float 4)
@@ -154,7 +159,7 @@
 launch CLIENTS.  Runs until you kill it (Ctrl-C / switch VT).  Needs DRM master
 + a seat -- run from a text console; see the README."
   (setf *frames* 0 *output* nil *scene-output* (cffi:null-pointer)
-        *wins* nil *next-idx* 0 *cgrab-mode* nil *cgrab-win* nil)
+        *wins* nil *next-idx* 0 *cgrab-mode* nil *cgrab-win* nil *cursor-mgr* nil)
   (wlr-log-init verbosity (cffi:null-pointer))
   (setf *display* (wl-display-create))
   (let ((procs nil))
@@ -174,6 +179,11 @@ launch CLIENTS.  Runs until you kill it (Ctrl-C / switch VT).  Needs DRM master
            (wlr-seat-set-capabilities
             *seat-f* (logior +wl-seat-capability-pointer+ +wl-seat-capability-keyboard+))
            (setf *focus-cursor* (wlr-cursor-create))
+           ;; a visible pointer: load a cursor theme and show the default arrow
+           (setf *cursor-mgr* (wlr-xcursor-manager-create (cffi:null-pointer) 24))
+           (let ((ok (wlr-xcursor-manager-load *cursor-mgr* 1.0)))
+             (wlr-cursor-set-xcursor *focus-cursor* *cursor-mgr* "default")
+             (format t "~&cursor theme loaded=~A~%" ok) (finish-output))
            (add-listener (cffi:foreign-slot-pointer *focus-cursor* '(:struct wlr-cursor) 'motion)
                          #'console-on-cursor-motion)
            (add-listener (cffi:foreign-slot-pointer *focus-cursor* '(:struct wlr-cursor) 'button)

@@ -127,6 +127,14 @@
 (cffi:defcfun ("wlr_keyboard_from_input_device" wlr-keyboard-from-input-device) :pointer
   (device :pointer))
 
+;; xcursor: a visible pointer image (loaded from an Xcursor theme)
+(cffi:defcfun ("wlr_xcursor_manager_create" wlr-xcursor-manager-create) :pointer
+  (name :string) (size :uint32))                ; name NULL -> default theme
+(cffi:defcfun ("wlr_xcursor_manager_load" wlr-xcursor-manager-load) :bool
+  (manager :pointer) (scale :float))
+(cffi:defcfun ("wlr_cursor_set_xcursor" wlr-cursor-set-xcursor) :void
+  (cursor :pointer) (manager :pointer) (name :string))
+
 ;; cursor focus to surfaces: find the surface under the cursor + notify the seat
 (defconstant +scene-node-buffer+ 2)   ; enum wlr_scene_node_type: TREE,RECT,BUFFER
 (cffi:defcfun ("wlr_scene_node_at" wlr-scene-node-at) :pointer
