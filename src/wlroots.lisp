@@ -134,6 +134,8 @@
   (manager :pointer) (scale :float))
 (cffi:defcfun ("wlr_cursor_set_xcursor" wlr-cursor-set-xcursor) :void
   (cursor :pointer) (manager :pointer) (name :string))
+(cffi:defcfun ("wlr_cursor_set_surface" wlr-cursor-set-surface) :void
+  (cursor :pointer) (surface :pointer) (hotspot-x :int32) (hotspot-y :int32))
 
 ;; cursor focus to surfaces: find the surface under the cursor + notify the seat
 (defconstant +scene-node-buffer+ 2)   ; enum wlr_scene_node_type: TREE,RECT,BUFFER

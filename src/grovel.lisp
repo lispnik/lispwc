@@ -135,4 +135,14 @@
   (surface "surface" :type :pointer))
 (cstruct wlr-seat "struct wlr_seat"
   (focused-surface     "pointer_state.focused_surface"  :type :pointer)
-  (kbd-focused-surface "keyboard_state.focused_surface" :type :pointer))
+  (focused-client      "pointer_state.focused_client"   :type :pointer)
+  (kbd-focused-surface "keyboard_state.focused_surface" :type :pointer)
+  (request-set-cursor  "events.request_set_cursor"      :type :pointer :count 2))
+
+;; a client asking to set its own pointer image (wl_pointer.set_cursor)
+(cstruct wlr-seat-pointer-request-set-cursor-event
+    "struct wlr_seat_pointer_request_set_cursor_event"
+  (rsc-seat-client "seat_client" :type :pointer)
+  (rsc-surface     "surface"     :type :pointer)   ; NULL means "hide the cursor"
+  (rsc-hotspot-x   "hotspot_x"   :type :int32)
+  (rsc-hotspot-y   "hotspot_y"   :type :int32))

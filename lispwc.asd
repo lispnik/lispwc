@@ -28,4 +28,5 @@
                              (:file "live-focus")
                              (:file "move-resize")
                              (:file "stack")
-                             (:file "console")))))
+                             (:file "console")
+                             (:file "cursor")))))

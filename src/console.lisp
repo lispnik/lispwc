@@ -63,6 +63,23 @@
       (t (setf *cgrab-mode* nil *cgrab-win* nil)))               ; release: end grab
     (wlr-seat-pointer-notify-button *seat-f* *frames* btn state)))
 
+(defun console-on-request-set-cursor (listener data)
+  "A client asked to set its own pointer image; honor it if that client has
+pointer focus (so a background client can't hijack the cursor)."
+  (declare (ignore listener))
+  (let ((sc  (cffi:foreign-slot-value
+              data '(:struct wlr-seat-pointer-request-set-cursor-event) 'rsc-seat-client))
+        (foc (cffi:foreign-slot-value *seat-f* '(:struct wlr-seat) 'focused-client)))
+    (when (cffi:pointer-eq sc foc)
+      (wlr-cursor-set-surface
+       *focus-cursor*
+       (cffi:foreign-slot-value
+        data '(:struct wlr-seat-pointer-request-set-cursor-event) 'rsc-surface)
+       (cffi:foreign-slot-value
+        data '(:struct wlr-seat-pointer-request-set-cursor-event) 'rsc-hotspot-x)
+       (cffi:foreign-slot-value
+        data '(:struct wlr-seat-pointer-request-set-cursor-event) 'rsc-hotspot-y)))))
+
 (defun console-on-key (listener data)
   (declare (ignore listener))
   (let ((kc (cffi:foreign-slot-value data '(:struct wlr-keyboard-key-event) 'keycode))
@@ -178,6 +195,8 @@ launch CLIENTS.  Runs until you kill it (Ctrl-C / switch VT).  Needs DRM master
            (setf *seat-f* (wlr-seat-create *display* "seat0"))
            (wlr-seat-set-capabilities
             *seat-f* (logior +wl-seat-capability-pointer+ +wl-seat-capability-keyboard+))
+           (add-listener (cffi:foreign-slot-pointer *seat-f* '(:struct wlr-seat) 'request-set-cursor)
+                         #'console-on-request-set-cursor)
            (setf *focus-cursor* (wlr-cursor-create))
            ;; a visible pointer: load a cursor theme and show the default arrow
            (setf *cursor-mgr* (wlr-xcursor-manager-create (cffi:null-pointer) 24))

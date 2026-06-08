@@ -180,7 +180,22 @@ On the test Pi it brought up the seat, the DRM backend, the V3D GLES2 renderer,
 **wired the real input devices through the Lisp closures**, loaded an Xcursor
 theme so the pointer is a real arrow (`cursor theme loaded=T`), enumerated the
 HDMI connectors, and opened a socket — everything up to `new_output`, which (as
-with `run-drm`) needs a connected monitor to fire.
+with `run-drm`) needs a connected monitor to fire. It also honors **client
+cursor requests** (below).
+
+**Client cursor images** — `(run-cursor)`. When the pointer enters a window the
+client may set its own cursor (`wl_pointer.set_cursor`), which wlroots raises as
+the seat's `request_set_cursor` signal; the handler applies it with
+`wlr_cursor_set_surface`, but only for the client that currently has pointer
+focus (so a background client can't hijack the pointer). Verified by hosting a
+toytoolkit client (`weston-flower`) and giving it pointer focus:
+
+```
+pointer entered the window at (150,150); waiting for the client to set its cursor
+client requested cursor: surface=set hotspot=(13,2) from-focused-client=T
+  -> applied via wlr_cursor_set_surface
+done. cursor requests honored: 1
+```
 
 Together these exercise the whole chain from Lisp: backend → event loop →
 output → `wlr_scene` rendering (correct pixels) → a real client connecting over
@@ -267,6 +282,10 @@ sudo env CPATH="$PWD/protocols" WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d)
 WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
      sbcl --eval '(asdf:load-system :lispwc)' --eval '(lispwc:run-stack)'
 
+# honor a client's own cursor (wl_pointer.set_cursor); weston-flower sets one
+WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
+     sbcl --eval '(asdf:load-system :lispwc)' --eval '(lispwc:run-cursor)'
+
 # drive the real monitor -- needs DRM master, so run as root (or on the
 # console) with a display plugged in:
 sudo env CPATH="$PWD/protocols" WLR_BACKENDS=drm \
@@ -332,8 +351,8 @@ Notes:
 ## Possible next steps
 
 - confirm `run-console` on a connected monitor end-to-end (the test Pi had none)
-- honor client cursor requests (`wl_pointer.set_cursor`) instead of always the arrow
 - xdg-popups, multiple outputs, and minimize/maximize/fullscreen requests
+- a layer-shell for panels/backgrounds, and output hotplug handling
 
 ## License
 
