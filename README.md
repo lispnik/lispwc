@@ -40,7 +40,9 @@ read-back pixel (0,0): R=25 G=51 B=115  (asked 26 51 115)   ; rounding only
 
 **Hosting a real client (xdg-shell)** — `(run-with-client)`: open a Wayland
 socket, launch a real client, host its window in the scene; the `new_toplevel`
-/ surface `commit` / `map` handlers are closures.
+/ surface `commit` / `map` handlers are closures. It advertises a `wl_seat` and
+a `wl_output` global, so input-requiring clients (e.g. `foot`) start too, not
+just the seat-less demos like `weston-simple-shm`.
 
 ```
 compositor socket: wayland-0

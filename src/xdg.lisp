@@ -43,6 +43,7 @@
     (wlr-output-state-set-custom-mode state 1280 720 60000)
     (wlr-output-commit-state *output* state)
     (wlr-output-state-finish state))
+  (wlr-output-create-global *output* *display*)   ; advertise wl_output (foot needs it)
   (setf *scene-output* (wlr-scene-output-create *scene* *output*))
   (add-listener (cffi:foreign-slot-pointer *output* '(:struct wlr-output) 'frame)
                 #'xdg-on-frame)
@@ -92,6 +93,11 @@ window.  Returns the number of surfaces mapped."
          (wlr-compositor-create *display* 6 *renderer*)
          (wlr-subcompositor-create *display*)
          (wlr-data-device-manager-create *display*)
+         ;; advertise a wl_seat (pointer + keyboard) so input-requiring clients
+         ;; such as foot will start -- they refuse to run without a seat
+         (wlr-seat-set-capabilities
+          (wlr-seat-create *display* "seat0")
+          (logior +wl-seat-capability-pointer+ +wl-seat-capability-keyboard+))
          (let ((xdg (wlr-xdg-shell-create *display* 3)))
            (add-listener (cffi:foreign-slot-pointer xdg '(:struct wlr-xdg-shell) 'new-toplevel)
                          #'xdg-on-new-toplevel))
