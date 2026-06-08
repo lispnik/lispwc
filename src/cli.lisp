@@ -50,8 +50,13 @@ device-backed demos (need root: libinput/DRM session):
   input [--injector PATH]      libinput events via /dev/uinput
   live-focus [--injector PATH] real input driving focus
   move-resize [--injector PATH] real button-drags move/resize a window
+  keys [--injector PATH]       compositor keybindings (Alt+Tab/F4/Esc)
   drm [--frames N]             fill the real monitor blue
   console [CLIENT...]          the whole interactive compositor on a real display
+
+In console/keys, the compositor keybindings are:
+  Alt+Tab  cycle + raise the next window     Alt+F4  close the focused window
+  Alt+Esc  quit the compositor
 ~%"))
 
 (defun main ()
@@ -75,6 +80,7 @@ device-backed demos (need root: libinput/DRM session):
           ((string= cmd "input")       (run-input :injector (%opt opts "--injector" "/tmp/inject")))
           ((string= cmd "live-focus")  (run-live-focus :injector (%opt opts "--injector" "/tmp/inject")))
           ((string= cmd "move-resize") (run-move-resize :injector (%opt opts "--injector" "/tmp/inject-drag")))
+          ((string= cmd "keys")        (run-keys :injector (%opt opts "--injector" "/tmp/inject-keys")))
           ((string= cmd "drm")         (run-drm :frames (or (%int (%opt opts "--frames")) 180)))
           ((string= cmd "console")     (run-console :clients (or (%positional opts) '("weston-simple-shm"))))
           (t (format *error-output* "lispwc: unknown command ~S~%~%" cmd)

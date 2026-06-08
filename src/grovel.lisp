@@ -124,7 +124,8 @@
   (state  "state"  :type :int))   ; 1 = pressed
 
 (cstruct wlr-keyboard "struct wlr_keyboard"
-  (key "events.key" :type :pointer :count 2))
+  (key       "events.key" :type :pointer :count 2)
+  (xkb-state "xkb_state"   :type :pointer))   ; for keysym lookup / modifiers
 
 (cstruct wlr-keyboard-key-event "struct wlr_keyboard_key_event"
   (keycode "keycode" :type :uint32)

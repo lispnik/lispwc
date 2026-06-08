@@ -241,6 +241,25 @@ RESULT: PASSED
 `run-console` uses the same unmap/destroy handling, so closing a window there
 drops it from the window list and frees its closures.
 
+**Compositor keybindings** — `(run-keys)`. The key handler reads the keyboard's
+modifiers (`wlr_keyboard_get_modifiers`) and resolves the keycode to an xkb
+keysym (libxkbcommon, so it's layout-independent) before deciding: **Alt+Tab**
+cycles + raises the next window, **Alt+F4** closes the focused window
+(`wlr_xdg_toplevel_send_close`), **Alt+Esc** quits; anything else is forwarded to
+the focused client. Verified with a synthetic keyboard (`tools/inject-keys.c`)
+on a headless + libinput backend hosting two windows:
+
+```
+window 1 mapped at (40,40)
+window 2 mapped at (100,100)
+Alt+Tab: focus window 1          (cycled from the newest window)
+Alt+F4: close window 1
+window 1 destroyed               (client honored the close; teardown ran)
+Alt+Esc: quit
+```
+
+`run-console` uses the same handler, so the shortcuts work on the real display.
+
 Together these exercise the whole chain from Lisp: backend → event loop →
 output → `wlr_scene` rendering (correct pixels) → a real client connecting over
 the protocol and being composited → input from real devices — **all of it
@@ -343,6 +362,12 @@ WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
 WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
      sbcl --eval '(asdf:load-system :lispwc)' --eval '(lispwc:run-teardown)'
 
+# compositor keybindings (Alt+Tab/F4/Esc), real keyboard via libinput (run as root):
+cc -O2 -o /tmp/inject-keys tools/inject-keys.c
+sudo env CPATH="$PWD/protocols" WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
+     sbcl --eval '(asdf:load-system :lispwc)' \
+     --eval '(lispwc:run-keys :injector "/tmp/inject-keys")'
+
 # drive the real monitor -- needs DRM master, so run as root (or on the
 # console) with a display plugged in:
 sudo env CPATH="$PWD/protocols" WLR_BACKENDS=drm \
@@ -409,7 +434,8 @@ to the focused window — runs there. On the Raspberry Pi 4 test box:
    if you have none). Move the mouse to move the pointer; **click** a window to
    raise + focus it;
    **left-drag** to move it; **right-drag** to resize it; **type** to send keys
-   to the focused window.
+   to the focused window. Compositor shortcuts: **Alt+Tab** cycles windows,
+   **Alt+F4** closes the focused one, **Alt+Esc** quits.
 5. **Quit** with **Ctrl-C** (or kill SBCL from another VT). Restore your desktop
    with `sudo chvt 1` / restarting the display manager.
 

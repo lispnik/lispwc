@@ -103,6 +103,8 @@
   (parent :pointer) (xdg-surface :pointer))
 (cffi:defcfun ("wlr_xdg_toplevel_set_size" wlr-xdg-toplevel-set-size) :uint32
   (toplevel :pointer) (width :int32) (height :int32))
+(cffi:defcfun ("wlr_xdg_toplevel_send_close" wlr-xdg-toplevel-send-close) :void
+  (toplevel :pointer))
 
 ;; window placement + a seat global
 (cffi:defcfun ("wlr_scene_node_set_position" wlr-scene-node-set-position) :void
@@ -146,6 +148,12 @@
   (layout :pointer) (output :pointer))
 (cffi:defcfun ("wlr_keyboard_from_input_device" wlr-keyboard-from-input-device) :pointer
   (device :pointer))
+(cffi:defcfun ("wlr_keyboard_set_keymap" wlr-keyboard-set-keymap) :bool
+  (keyboard :pointer) (keymap :pointer))
+(cffi:defcfun ("wlr_keyboard_get_modifiers" wlr-keyboard-get-modifiers) :uint32
+  (keyboard :pointer))
+(defconstant +mod-alt+ 8)        ; WLR_MODIFIER_ALT = 1<<3
+(defconstant +mod-logo+ 64)      ; WLR_MODIFIER_LOGO (Super) = 1<<6
 
 ;; xcursor: a visible pointer image (loaded from an Xcursor theme)
 (cffi:defcfun ("wlr_xcursor_manager_create" wlr-xcursor-manager-create) :pointer

@@ -6,4 +6,4 @@
 
 (defpackage #:lispwc
   (:use #:cl #:cffi-callback-closures)
-  (:export #:run-headless #:render-color-test #:run-with-client #:run-multi #:run-drm #:run-input #:run-focus #:run-live-focus #:run-move-resize #:run-stack #:run-console #:run-cursor #:run-layer #:run-teardown #:main #:update-pointer-focus))
+  (:export #:run-headless #:render-color-test #:run-with-client #:run-multi #:run-drm #:run-input #:run-focus #:run-live-focus #:run-move-resize #:run-stack #:run-console #:run-cursor #:run-layer #:run-teardown #:run-keys #:main #:update-pointer-focus))

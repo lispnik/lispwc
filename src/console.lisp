@@ -24,6 +24,7 @@
 (defvar *cgrab-cx* 0d0)  (defvar *cgrab-cy* 0d0)
 (defvar *cgrab-sw* 0)    (defvar *cgrab-sh* 0)
 (defvar *cursor-mgr* nil)               ; xcursor theme manager
+(defvar *focused-win* nil)              ; window with the keyboard focus
 
 (defun console-on-cursor-motion (listener data)
   (declare (ignore listener))
@@ -55,6 +56,7 @@
              (wlr-scene-node-raise-to-top (win-tree w))         ; click-to-raise
              (update-pointer-focus cx cy *frames*)              ; pointer focus
              (when (win-surface w) (focus-keyboard (win-surface w)))  ; keyboard focus
+             (setf *focused-win* w)
              (if (= btn 273)
                  (setf *cgrab-mode* :resize *cgrab-win* w
                        *cgrab-cx* cx *cgrab-cy* cy *cgrab-sw* (win-w w) *cgrab-sh* (win-h w))
@@ -80,10 +82,43 @@ pointer focus (so a background client can't hijack the cursor)."
        (cffi:foreign-slot-value
         data '(:struct wlr-seat-pointer-request-set-cursor-event) 'rsc-hotspot-y)))))
 
-(defun console-on-key (listener data)
-  (declare (ignore listener))
+(defun focus-window (w)
+  "Raise W, give it the keyboard focus, and record it as focused."
+  (when w
+    (wlr-scene-node-raise-to-top (win-tree w))
+    (when (win-surface w) (focus-keyboard (win-surface w)))
+    (setf *focused-win* w)))
+
+(defun cycle-focus ()
+  "Alt+Tab: focus (and raise) the next window in the list."
+  (when (>= (length *wins*) 2)
+    (let* ((pos  (position *focused-win* *wins*))
+           (next (nth (mod (1+ (or pos -1)) (length *wins*)) *wins*)))
+      (focus-window next)
+      (format t "~&Alt+Tab: focus window ~D~%" (win-label next)) (finish-output))))
+
+(defun close-focused ()
+  "Alt+F4: ask the focused window's client to close."
+  (let ((w *focused-win*))
+    (when (and w (win-toplevel w))
+      (wlr-xdg-toplevel-send-close (win-toplevel w))
+      (format t "~&Alt+F4: close window ~D~%" (win-label w)) (finish-output))))
+
+(defun console-key (kbd data)
+  "Intercept compositor keybindings (Alt+Tab / Alt+F4 / Alt+Esc); otherwise
+forward the key to the focused client."
   (let ((kc (cffi:foreign-slot-value data '(:struct wlr-keyboard-key-event) 'keycode))
         (st (cffi:foreign-slot-value data '(:struct wlr-keyboard-key-event) 'state)))
+    (when (= st 1)                                  ; on press, check for a binding
+      (let ((mods (wlr-keyboard-get-modifiers kbd))
+            (sym  (keyboard-keysym kbd kc)))
+        (when (logtest mods +mod-alt+)
+          (cond
+            ((= sym +key-tab+)    (cycle-focus)   (return-from console-key))
+            ((= sym +key-f4+)     (close-focused) (return-from console-key))
+            ((= sym +key-escape+) (format t "~&Alt+Esc: quit~%") (finish-output)
+                                  (wl-display-terminate *display*)
+                                  (return-from console-key))))))
     (wlr-seat-keyboard-notify-key *seat-f* *frames* kc st)))
 
 (defun console-on-new-input (listener data)
@@ -93,10 +128,11 @@ pointer focus (so a background client can't hijack the cursor)."
       (1 (wlr-cursor-attach-input-device *focus-cursor* data)
          (format t "~&new_input: pointer attached~%"))
       (0 (let ((kbd (wlr-keyboard-from-input-device data)))
+           (keyboard-set-default-keymap kbd)        ; so modifiers track + keysyms resolve
            (wlr-seat-set-keyboard *seat-f* kbd)
            (add-listener (cffi:foreign-slot-pointer kbd '(:struct wlr-keyboard) 'key)
-                         #'console-on-key))
-         (format t "~&new_input: keyboard attached~%")))
+                         (lambda (l d) (declare (ignore l)) (console-key kbd d))))
+         (format t "~&new_input: keyboard attached (keymap set)~%")))
     (finish-output)))
 
 (defun console-on-new-toplevel (listener data)
@@ -124,20 +160,21 @@ pointer focus (so a background client can't hijack the cursor)."
                     (win-w w) (cffi:foreign-slot-value surface '(:struct wlr-surface) 'cur-width)
                     (win-h w) (cffi:foreign-slot-value surface '(:struct wlr-surface) 'cur-height))
               (wlr-scene-node-set-position tree px py)
-              (wlr-scene-node-raise-to-top tree)
-              (when (win-surface w) (focus-keyboard surface))   ; focus the newest window
               (pushnew w *wins*)
+              (focus-window w)                                  ; raise + focus the newest window
               (format t "~&window ~D mapped at (~D,~D)~%" (win-label w) px py)
               (finish-output)))
            (add-listener
             (cffi:foreign-slot-pointer surface '(:struct wlr-surface) 'unmap)
             (lambda (l d) (declare (ignore l d))
               (setf *wins* (remove w *wins*))                   ; hidden; scene node auto-hides
+              (when (eq *focused-win* w) (setf *focused-win* nil))
               (when (eq *cgrab-win* w) (setf *cgrab-mode* nil *cgrab-win* nil))))
            (add-listener
             (cffi:foreign-slot-pointer surface '(:struct wlr-surface) 'destroy)
             (lambda (l d) (declare (ignore l d))
               (when (eq *cgrab-win* w) (setf *cgrab-mode* nil *cgrab-win* nil))
+              (when (eq *focused-win* w) (setf *focused-win* nil))
               (forget-window w)                                 ; unlink listeners now, free later
               (format t "~&window ~D destroyed~%" (win-label w)) (finish-output)))))))
 
@@ -191,7 +228,8 @@ pointer focus (so a background client can't hijack the cursor)."
 launch CLIENTS.  Runs until you kill it (Ctrl-C / switch VT).  Needs DRM master
 + a seat -- run from a text console; see the README."
   (setf *frames* 0 *output* nil *scene-output* (cffi:null-pointer)
-        *wins* nil *next-idx* 0 *cgrab-mode* nil *cgrab-win* nil *cursor-mgr* nil)
+        *wins* nil *next-idx* 0 *cgrab-mode* nil *cgrab-win* nil *cursor-mgr* nil
+        *focused-win* nil)
   (wlr-log-init verbosity (cffi:null-pointer))
   (setf *display* (wl-display-create))
   (let ((procs nil))
