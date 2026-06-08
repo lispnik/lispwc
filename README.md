@@ -111,6 +111,26 @@ OUTSIDE cursor (5,5):     node-surface=none seat-focus=NULL  MATCH
   keyboard focus cleared -> NULL (ok)
 ```
 
+**Real input driving focus** — `(run-live-focus)`. Combines a headless backend
+(for an output + a client to focus) with a **libinput** backend under one
+`wlr_multi_backend`, then wires the *same* focus logic to actual device events:
+cursor `motion` → `update-pointer-focus` at the cursor; button press →
+click-to-focus the keyboard; `key` → forward to the keyboard-focused surface.
+Driven by the synthetic `/dev/uinput` devices (`tools/inject.c`):
+
+```
+new_input: pointer -> attached to cursor
+cursor placed over window at (120,120); waiting for real input
+motion -> cursor (126,124)  pointer-focus=surface MATCH      (focus follows the real cursor)
+motion -> cursor (185,163)  pointer-focus=surface MATCH
+button 272 press -> keyboard focus set MATCH                 (real click focuses the keyboard)
+key 30 press   -> forwarded to keyboard-focused surface      (real key reaches the client)
+key 30 release -> forwarded to keyboard-focused surface
+```
+
+So a real mouse/keyboard → libinput → `wlr_cursor`/`wlr_keyboard` → the focus
+closures → pointer + keyboard focus, end-to-end.
+
 Together these exercise the whole chain from Lisp: backend → event loop →
 output → `wlr_scene` rendering (correct pixels) → a real client connecting over
 the protocol and being composited → input from real devices — **all of it
@@ -180,6 +200,12 @@ sudo env CPATH="$PWD/protocols" WLR_BACKENDS=libinput \
      sbcl --eval '(asdf:load-system :lispwc)' \
      --eval '(lispwc:run-input :injector "/tmp/inject")'
 
+# real libinput input driving focus (headless output + libinput, run as root):
+cc -O2 -o /tmp/inject tools/inject.c
+sudo env CPATH="$PWD/protocols" WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
+     sbcl --eval '(asdf:load-system :lispwc)' \
+     --eval '(lispwc:run-live-focus :injector "/tmp/inject")'
+
 # drive the real monitor -- needs DRM master, so run as root (or on the
 # console) with a display plugged in:
 sudo env CPATH="$PWD/protocols" WLR_BACKENDS=drm \
@@ -191,8 +217,6 @@ display; it's also what makes the readback buffer CPU-mappable.)
 
 ## Possible next steps
 
-- wire the libinput motion/key handlers (`run-input`) into the focus logic so a
-  real mouse/keyboard drives focus, not just the scripted warps
 - window interaction (move/resize, drag) using the input events
 - show it on a real monitor end-to-end (DRM backend + a connected display)
 

@@ -24,6 +24,14 @@
   (loop :pointer) (session-ptr :pointer))
 (cffi:defcfun ("wlr_headless_add_output" wlr-headless-add-output) :pointer
   (backend :pointer) (width :uint) (height :uint))
+;; combine a headless backend (for an output) with a libinput backend (for real
+;; input devices) under one multi-backend
+(cffi:defcfun ("wlr_session_create" wlr-session-create) :pointer (loop :pointer))
+(cffi:defcfun ("wlr_libinput_backend_create" wlr-libinput-backend-create) :pointer
+  (session :pointer))
+(cffi:defcfun ("wlr_multi_backend_create" wlr-multi-backend-create) :pointer (loop :pointer))
+(cffi:defcfun ("wlr_multi_backend_add" wlr-multi-backend-add) :bool
+  (multi :pointer) (backend :pointer))
 
 ;; renderer + allocator
 (cffi:defcfun ("wlr_renderer_autocreate" wlr-renderer-autocreate) :pointer

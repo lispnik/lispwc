@@ -24,4 +24,5 @@
                              (:file "input")
                              (:file "drm")
                              (:file "events")
-                             (:file "focus")))))
+                             (:file "focus")
+                             (:file "live-focus")))))
