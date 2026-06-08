@@ -31,4 +31,5 @@
                              (:file "layer")
                              (:file "console")
                              (:file "cursor")
-                             (:file "teardown")))))
+                             (:file "teardown")
+                             (:file "cli")))))

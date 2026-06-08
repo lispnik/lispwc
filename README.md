@@ -352,6 +352,24 @@ sudo env CPATH="$PWD/protocols" WLR_BACKENDS=drm \
 (Force software rendering with `WLR_RENDERER=pixman` when there's no usable GPU
 display; it's also what makes the readback buffer CPU-mappable.)
 
+## A standalone binary
+
+`build.sh` bakes lispwc into a single executable with `save-lisp-and-die`, so
+you can launch it straight from the shell — no `sbcl --eval` incantation:
+
+```sh
+./build.sh                       # writes ./lispwc (an SBCL image, ~40 MB)
+./lispwc help                    # list the subcommands
+./lispwc headless --frames 60    # headless demos run anywhere
+WLR_RENDERER=pixman ./lispwc stack
+sudo ./lispwc console weston-simple-shm weston-flower   # real display (DRM + libinput)
+```
+
+Each subcommand maps to a `run-*` entry point (`./lispwc help` lists them all).
+The grovel step needs the generated protocol headers while building — `build.sh`
+runs `generate.sh` for you — but the finished binary doesn't need them, or SBCL,
+at runtime.
+
 ## Running on a real console from scratch
 
 The demos above run headless over SSH. To drive a **real monitor with a real
@@ -384,6 +402,8 @@ to the focused window — runs there. On the Raspberry Pi 4 test box:
         sbcl --eval '(asdf:load-system :lispwc)' \
              --eval '(lispwc:run-console :clients (list "weston-simple-shm" "weston-simple-shm"))'
    ```
+   (Or build the binary once — `./build.sh` — and run
+   `sudo XDG_RUNTIME_DIR=$(mktemp -d) ./lispwc console weston-simple-shm`.)
    The monitor switches to a dim background with the client windows on it, and
    an arrow pointer (loaded from an Xcursor theme — `apt install adwaita-icon-theme`
    if you have none). Move the mouse to move the pointer; **click** a window to

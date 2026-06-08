@@ -6,3 +6,6 @@
 *.abcl
 *.o
 *.so
+
+# saved executable image (build.sh)
+/lispwc
