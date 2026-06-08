@@ -16,6 +16,7 @@
   (display :pointer))
 (cffi:defcfun ("wl_display_run" wl-display-run) :void (display :pointer))
 (cffi:defcfun ("wl_display_terminate" wl-display-terminate) :void (display :pointer))
+(cffi:defcfun ("wl_display_destroy_clients" wl-display-destroy-clients) :void (display :pointer))
 (cffi:defcfun ("wl_display_destroy" wl-display-destroy) :void (display :pointer))
 (cffi:defcfun ("wl_display_add_socket_auto" wl-display-add-socket-auto) :string
   (display :pointer))

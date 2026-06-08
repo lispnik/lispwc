@@ -83,7 +83,13 @@
 
 ;;; --- xdg-shell ---
 (cstruct wlr-xdg-shell "struct wlr_xdg_shell"
-  (new-toplevel "events.new_toplevel" :type :pointer :count 2))
+  (new-toplevel "events.new_toplevel" :type :pointer :count 2)
+  (new-popup    "events.new_popup"    :type :pointer :count 2))
+
+;; a transient child surface: menu, tooltip, dropdown
+(cstruct wlr-xdg-popup "struct wlr_xdg_popup"
+  (base   "base"   :type :pointer)        ; its wlr_xdg_surface
+  (parent "parent" :type :pointer))       ; the wlr_surface it hangs off
 
 (cstruct wlr-xdg-toplevel "struct wlr_xdg_toplevel"
   (base "base" :type :pointer)
@@ -93,7 +99,8 @@
 
 (cstruct wlr-xdg-surface "struct wlr_xdg_surface"
   (surface        "surface"        :type :pointer)
-  (initial-commit "initial_commit" :type :uint8))   ; C _Bool, 1 byte
+  (initial-commit "initial_commit" :type :uint8)     ; C _Bool, 1 byte
+  (data           "data"           :type :pointer))  ; compositor scratch: we stash the scene tree
 
 (cstruct wlr-surface "struct wlr_surface"
   (commit    "events.commit"  :type :pointer :count 2)

@@ -44,6 +44,7 @@ headless backed demos (no root, run over SSH):
   stack [--client CMD]         click-to-raise / window stacking
   cursor [--client CMD]        honor a client's wl_pointer.set_cursor
   layer [--client CMD]         layer-shell panel/background (swaybg)
+  popup [--client CMD]         xdg-popup menus (right-clicks weston-terminal)
   teardown [--client CMD]      open+close a window, verify closures freed
 
 device-backed demos (need root: libinput/DRM session):
@@ -76,6 +77,7 @@ In console/keys, the compositor keybindings are:
           ((string= cmd "stack")       (run-stack :client (%opt opts "--client" "weston-simple-shm")))
           ((string= cmd "cursor")      (run-cursor :client (%opt opts "--client" "weston-flower")))
           ((string= cmd "layer")       (run-layer :client (%opt opts "--client" "swaybg -c 224488")))
+          ((string= cmd "popup")       (run-popup :client (%opt opts "--client" "weston-terminal")))
           ((string= cmd "teardown")    (run-teardown :client (%opt opts "--client" "weston-simple-shm")))
           ((string= cmd "input")       (run-input :injector (%opt opts "--injector" "/tmp/inject")))
           ((string= cmd "live-focus")  (run-live-focus :injector (%opt opts "--injector" "/tmp/inject")))

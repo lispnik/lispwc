@@ -262,6 +262,25 @@ Alt+Esc: quit
 
 `run-console` uses the same handler, so the shortcuts work on the real display.
 
+**xdg-popups (menus)** — `(run-popup)`. A popup is a transient child surface
+(menu, tooltip, dropdown) positioned by an `xdg_positioner` relative to a
+parent. `on-new-popup` places it in the scene under its *parent's* tree — found
+via a pointer stashed in the parent `xdg_surface`'s `data` — so the `wlr_scene`
+helper does the relative positioning. Verified by right-clicking
+`weston-terminal` to open its menu:
+
+```
+terminal mapped at (50,50)
+pointer entered the terminal at (150,150)
+right-clicked the terminal (expecting a menu popup)
+new_popup: menu surface created (parent: window)
+done. popups created: 1
+```
+
+`run-console` handles `new_popup` too, so menus work there. (Tearing down a
+display while a popup grab is live needs `wl_display_destroy_clients` *before*
+`wl_display_destroy`, or it faults — both paths do that now.)
+
 Together these exercise the whole chain from Lisp: backend → event loop →
 output → `wlr_scene` rendering (correct pixels) → a real client connecting over
 the protocol and being composited → input from real devices — **all of it
@@ -369,6 +388,10 @@ cc -O2 -o /tmp/inject-keys tools/inject-keys.c
 sudo env CPATH="$PWD/protocols" WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
      sbcl --eval '(asdf:load-system :lispwc)' \
      --eval '(lispwc:run-keys :injector "/tmp/inject-keys")'
+
+# xdg-popup menus: right-click weston-terminal to open its menu
+WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
+     sbcl --eval '(asdf:load-system :lispwc)' --eval '(lispwc:run-popup)'
 
 # drive the real monitor -- needs DRM master, so run as root (or on the
 # console) with a display plugged in:

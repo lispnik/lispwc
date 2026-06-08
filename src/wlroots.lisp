@@ -101,6 +101,8 @@
   (display :pointer) (version :uint32))
 (cffi:defcfun ("wlr_scene_xdg_surface_create" wlr-scene-xdg-surface-create) :pointer
   (parent :pointer) (xdg-surface :pointer))
+(cffi:defcfun ("wlr_xdg_surface_try_from_wlr_surface" wlr-xdg-surface-try-from-wlr-surface) :pointer
+  (surface :pointer))
 (cffi:defcfun ("wlr_xdg_toplevel_set_size" wlr-xdg-toplevel-set-size) :uint32
   (toplevel :pointer) (width :int32) (height :int32))
 (cffi:defcfun ("wlr_xdg_toplevel_send_close" wlr-xdg-toplevel-send-close) :void

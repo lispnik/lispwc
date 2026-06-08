@@ -30,6 +30,7 @@
                              (:file "move-resize")
                              (:file "stack")
                              (:file "layer")
+                             (:file "popup")
                              (:file "console")
                              (:file "keys")
                              (:file "cursor")
