@@ -131,6 +131,31 @@ key 30 release -> forwarded to keyboard-focused surface
 So a real mouse/keyboard → libinput → `wlr_cursor`/`wlr_keyboard` → the focus
 closures → pointer + keyboard focus, end-to-end.
 
+**Interactive window move/resize** — `(run-move-resize)`. Press a button over a
+window to begin a grab, drag to update it, release to end — each step inside the
+cursor's motion/button closures. **Left**-drag moves (reposition the window's
+scene node to follow the cursor); **right**-drag resizes (recompute geometry and
+ask the client for the new size via `wlr_xdg_toplevel_set_size`). Driven by the
+synthetic pointer in `tools/inject-drag.c`:
+
+```
+client mapped at (100,100), size 250x250
+begin MOVE grab (window at 100,100)
+move   -> window at (104,103)  [scene node reads (104,103)]    (move tracks the drag...
+move   -> window at (187,158)  [scene node reads (187,158)]     ...scene node confirms it)
+end MOVE grab
+begin RESIZE grab (size 250x250)
+resize -> requested 259x256  [toplevel scheduled 259x256]      (resize grows the geometry...
+resize -> requested 328x297  [toplevel scheduled 328x297]       ...and the configure matches)
+end RESIZE grab
+```
+
+Move is fully compositor-side, so it's verified by reading the scene node's
+position straight back. Resize is the compositor asking the client for a size
+(a configure), verified against the toplevel's scheduled size (whether the
+window's pixels follow is up to the client — `weston-simple-shm` keeps its
+buffer fixed).
+
 Together these exercise the whole chain from Lisp: backend → event loop →
 output → `wlr_scene` rendering (correct pixels) → a real client connecting over
 the protocol and being composited → input from real devices — **all of it
@@ -206,6 +231,12 @@ sudo env CPATH="$PWD/protocols" WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d)
      sbcl --eval '(asdf:load-system :lispwc)' \
      --eval '(lispwc:run-live-focus :injector "/tmp/inject")'
 
+# interactive window move/resize from real button-drags (run as root):
+cc -O2 -o /tmp/inject-drag tools/inject-drag.c
+sudo env CPATH="$PWD/protocols" WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
+     sbcl --eval '(asdf:load-system :lispwc)' \
+     --eval '(lispwc:run-move-resize :injector "/tmp/inject-drag")'
+
 # drive the real monitor -- needs DRM master, so run as root (or on the
 # console) with a display plugged in:
 sudo env CPATH="$PWD/protocols" WLR_BACKENDS=drm \
@@ -217,8 +248,8 @@ display; it's also what makes the readback buffer CPU-mappable.)
 
 ## Possible next steps
 
-- window interaction (move/resize, drag) using the input events
 - show it on a real monitor end-to-end (DRM backend + a connected display)
+- click-to-raise / window stacking across multiple windows
 
 ## License
 

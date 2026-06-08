@@ -25,4 +25,5 @@
                              (:file "drm")
                              (:file "events")
                              (:file "focus")
-                             (:file "live-focus")))))
+                             (:file "live-focus")
+                             (:file "move-resize")))))

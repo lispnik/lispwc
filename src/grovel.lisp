@@ -83,15 +83,20 @@
   (new-toplevel "events.new_toplevel" :type :pointer :count 2))
 
 (cstruct wlr-xdg-toplevel "struct wlr_xdg_toplevel"
-  (base "base" :type :pointer))
+  (base "base" :type :pointer)
+  ;; the size the compositor last asked the client for (scheduled configure)
+  (sched-width  "scheduled.width"  :type :int32)
+  (sched-height "scheduled.height" :type :int32))
 
 (cstruct wlr-xdg-surface "struct wlr_xdg_surface"
   (surface        "surface"        :type :pointer)
   (initial-commit "initial_commit" :type :uint8))   ; C _Bool, 1 byte
 
 (cstruct wlr-surface "struct wlr_surface"
-  (commit "events.commit" :type :pointer :count 2)
-  (map    "events.map"    :type :pointer :count 2))
+  (commit    "events.commit" :type :pointer :count 2)
+  (map       "events.map"    :type :pointer :count 2)
+  (cur-width  "current.width"  :type :int)    ; mapped size, surface-local
+  (cur-height "current.height" :type :int))
 
 ;;; --- input events (wlr_cursor + libinput) ---
 ;; enum wlr_input_device_type: KEYBOARD=0 POINTER=1 TOUCH=2 ...
@@ -123,7 +128,9 @@
 ;;; --- cursor focus to surfaces ---
 ;; enum wlr_scene_node_type: TREE=0 RECT=1 BUFFER=2
 (cstruct wlr-scene-node "struct wlr_scene_node"
-  (type "type" :type :int))
+  (type "type" :type :int)
+  (x "x" :type :int)        ; position relative to parent
+  (y "y" :type :int))
 (cstruct wlr-scene-surface "struct wlr_scene_surface"
   (surface "surface" :type :pointer))
 (cstruct wlr-seat "struct wlr_seat"
