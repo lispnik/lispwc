@@ -30,4 +30,5 @@
                              (:file "stack")
                              (:file "layer")
                              (:file "console")
-                             (:file "cursor")))))
+                             (:file "cursor")
+                             (:file "teardown")))))

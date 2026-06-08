@@ -110,26 +110,40 @@ pointer focus (so a background client can't hijack the cursor)."
          (py      (+ 40 (* 60 idx)))
          (w       (make-win :label (1+ idx) :tree tree :toplevel toplevel :x px :y py)))
     (incf *next-idx*)
-    (add-listener
-     (cffi:foreign-slot-pointer surface '(:struct wlr-surface) 'commit)
-     (lambda (l d) (declare (ignore l d))
-       (when (plusp (cffi:foreign-slot-value base '(:struct wlr-xdg-surface) 'initial-commit))
-         (wlr-xdg-toplevel-set-size toplevel 0 0))))
-    (add-listener
-     (cffi:foreign-slot-pointer surface '(:struct wlr-surface) 'map)
-     (lambda (l d) (declare (ignore l d))
-       (setf (win-surface w) surface
-             (win-w w) (cffi:foreign-slot-value surface '(:struct wlr-surface) 'cur-width)
-             (win-h w) (cffi:foreign-slot-value surface '(:struct wlr-surface) 'cur-height))
-       (wlr-scene-node-set-position tree px py)
-       (wlr-scene-node-raise-to-top tree)
-       (when (win-surface w) (focus-keyboard surface))   ; focus the newest window
-       (push w *wins*)
-       (format t "~&window ~D mapped at (~D,~D)~%" (win-label w) px py)
-       (finish-output)))))
+    (setf (win-listeners w)
+          (list
+           (add-listener
+            (cffi:foreign-slot-pointer surface '(:struct wlr-surface) 'commit)
+            (lambda (l d) (declare (ignore l d))
+              (when (plusp (cffi:foreign-slot-value base '(:struct wlr-xdg-surface) 'initial-commit))
+                (wlr-xdg-toplevel-set-size toplevel 0 0))))
+           (add-listener
+            (cffi:foreign-slot-pointer surface '(:struct wlr-surface) 'map)
+            (lambda (l d) (declare (ignore l d))
+              (setf (win-surface w) surface
+                    (win-w w) (cffi:foreign-slot-value surface '(:struct wlr-surface) 'cur-width)
+                    (win-h w) (cffi:foreign-slot-value surface '(:struct wlr-surface) 'cur-height))
+              (wlr-scene-node-set-position tree px py)
+              (wlr-scene-node-raise-to-top tree)
+              (when (win-surface w) (focus-keyboard surface))   ; focus the newest window
+              (pushnew w *wins*)
+              (format t "~&window ~D mapped at (~D,~D)~%" (win-label w) px py)
+              (finish-output)))
+           (add-listener
+            (cffi:foreign-slot-pointer surface '(:struct wlr-surface) 'unmap)
+            (lambda (l d) (declare (ignore l d))
+              (setf *wins* (remove w *wins*))                   ; hidden; scene node auto-hides
+              (when (eq *cgrab-win* w) (setf *cgrab-mode* nil *cgrab-win* nil))))
+           (add-listener
+            (cffi:foreign-slot-pointer surface '(:struct wlr-surface) 'destroy)
+            (lambda (l d) (declare (ignore l d))
+              (when (eq *cgrab-win* w) (setf *cgrab-mode* nil *cgrab-win* nil))
+              (forget-window w)                                 ; unlink listeners now, free later
+              (format t "~&window ~D destroyed~%" (win-label w)) (finish-output)))))))
 
 (defun console-on-frame (listener data)
   (declare (ignore listener data))
+  (reap-listeners)                          ; free closures of windows closed last frame
   (unless (cffi:null-pointer-p *scene-output*)
     (wlr-scene-output-commit *scene-output* (cffi:null-pointer))
     (cffi:with-foreign-object (ts '(:struct timespec))

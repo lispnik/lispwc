@@ -216,6 +216,31 @@ done. layer surfaces mapped: 1
 (`run-console` advertises the same global, so a panel or wallpaper works on the
 real display too.)
 
+**Closing windows cleanly (closure teardown)** — `(run-teardown)`. Every other
+demo only *adds* `wl_listener` closures; this exercises the **free** side of the
+[cffi-callback-closures](https://github.com/lispnik/cffi-callback-closures)
+lifecycle. When a window's surface is destroyed the handler unlinks all of its
+listeners (while the surface's signals are still valid), and the frame loop
+frees the libffi trampolines *afterwards* — never from inside a notify, because
+freeing a closure while it is the one executing is a use-after-free. Verified by
+opening a window, closing the client, and checking the registry, the listener
+count, and the closures themselves:
+
+```
+window mapped: 1 live window(s), listeners 7 (was 3), 4 window closures live
+closing the client...
+surface unmapped: 0 live window(s)
+surface destroyed: listeners unlinked (now 3)
+teardown check:
+  window dropped from registry ... ok
+  listeners back to baseline 3 ... ok
+  window closures freed (0 live) ... ok
+RESULT: PASSED
+```
+
+`run-console` uses the same unmap/destroy handling, so closing a window there
+drops it from the window list and frees its closures.
+
 Together these exercise the whole chain from Lisp: backend → event loop →
 output → `wlr_scene` rendering (correct pixels) → a real client connecting over
 the protocol and being composited → input from real devices — **all of it
@@ -235,7 +260,11 @@ it runs over SSH with no display and no root.
 - **`src/wayland.lisp`** binds libwayland-server and provides `add-listener` —
   `wl_signal_add` reimplemented on the exported `wl_list_insert` (the real
   `wl_signal_add` is `static inline`, so there's no symbol to call). `notify` is
-  a `make-foreign-callback` closure.
+  a `make-foreign-callback` closure. It also has `unlink-listener` /
+  `reap-listeners`: tearing a listener down splits unlinking it from its signal
+  (done eagerly, while the signal is still valid) from freeing its trampoline
+  (deferred to a frame, because freeing a closure from inside its own notify is
+  a use-after-free).
 - **`src/wlroots.lisp`** binds the wlroots 0.19 subset (backend, renderer,
   allocator, output state, scene).
 - **`src/main.lisp`** is the flow: create display + headless backend + renderer
@@ -309,6 +338,10 @@ WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
 # layer-shell: host swaybg as a background (apt install swaybg)
 WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
      sbcl --eval '(asdf:load-system :lispwc)' --eval '(lispwc:run-layer)'
+
+# closure teardown test: open a window, close it, verify listeners/closures freed
+WLR_RENDERER=pixman XDG_RUNTIME_DIR=$(mktemp -d) \
+     sbcl --eval '(asdf:load-system :lispwc)' --eval '(lispwc:run-teardown)'
 
 # drive the real monitor -- needs DRM master, so run as root (or on the
 # console) with a display plugged in:

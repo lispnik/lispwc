@@ -13,11 +13,21 @@
 
 (in-package #:lispwc)
 
-(defstruct (win (:constructor make-win)) label surface tree toplevel x y w h)
+(defstruct (win (:constructor make-win))
+  label surface tree toplevel x y w h
+  listeners)                    ; this window's wl_listeners, for teardown
 
 (defvar *wins* nil)             ; mapped windows, most-recently-pushed first
 (defvar *next-idx* 0)
 (defvar *both-frame* nil)
+
+(defun forget-window (w)
+  "A window's surface is being destroyed: unlink all of its listeners now (while
+its signals are still valid) -- the trampolines are freed later by
+REAP-LISTENERS -- and drop it from the window list."
+  (dolist (l (win-listeners w)) (unlink-listener l))
+  (setf (win-listeners w) nil
+        *wins* (remove w *wins*)))
 
 (defun surface-at (lx ly)
   "The wlr_surface of the topmost window at (LX,LY), or a NULL pointer."

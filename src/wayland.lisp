@@ -31,6 +31,12 @@
 (defvar *listeners* '()
   "Keeps wl_listener structs and their callbacks reachable for the run's life.")
 
+(defvar *dead-listeners* '()
+  "(listener . cb) pairs unlinked from their signal but not yet freed.  Freeing a
+libffi closure while it is executing is a use-after-free, and a destroy notify is
+itself a closure -- so UNLINK-LISTENER queues here and REAP-LISTENERS does the
+free later, from a frame/idle, never from inside the callback being freed.")
+
 (defun add-listener (signal notify-fn)
   "Register NOTIFY-FN, a (lambda (listener data) ...), on the wl_signal at the
 foreign pointer SIGNAL.  This is wl_signal_add reimplemented on the exported
@@ -47,6 +53,29 @@ C's wl_container_of dance."
     (push (cons listener cb) *listeners*)
     listener))
 
+(defun listener-callback (listener)
+  "The foreign-callback object backing LISTENER, or NIL."
+  (cdr (assoc listener *listeners* :test #'cffi:pointer-eq)))
+
+(defun unlink-listener (listener)
+  "Unlink LISTENER from its signal NOW -- this must happen before the object
+that owns the signal is freed -- and queue its trampoline for REAP-LISTENERS to
+free at a safe point.  Safe to call from inside a notify callback (including the
+listener's own), because it does not free the closure here."
+  (ignore-errors (wl-list-remove listener))     ; &listener->link == listener
+  (let ((entry (assoc listener *listeners* :test #'cffi:pointer-eq)))
+    (when entry
+      (setf *listeners* (remove entry *listeners*))
+      (push entry *dead-listeners*))))
+
+(defun reap-listeners ()
+  "Free the trampolines queued by UNLINK-LISTENER.  Call from a frame or idle,
+never from inside the callback being freed."
+  (dolist (e *dead-listeners*)
+    (ignore-errors (free-foreign-callback (cdr e)))
+    (ignore-errors (cffi:foreign-free (car e))))
+  (setf *dead-listeners* '()))
+
 (defun free-listeners ()
   "Unlink every listener from its signal (wlroots asserts the lists are empty at
 backend finish) and release its memory + callback."
@@ -54,4 +83,5 @@ backend finish) and release its memory + callback."
     (ignore-errors (wl-list-remove (car l)))   ; &listener->link == listener
     (ignore-errors (free-foreign-callback (cdr l)))
     (ignore-errors (cffi:foreign-free (car l))))
-  (setf *listeners* '()))
+  (setf *listeners* '())
+  (reap-listeners))

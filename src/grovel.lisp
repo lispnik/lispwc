@@ -96,8 +96,10 @@
   (initial-commit "initial_commit" :type :uint8))   ; C _Bool, 1 byte
 
 (cstruct wlr-surface "struct wlr_surface"
-  (commit    "events.commit" :type :pointer :count 2)
-  (map       "events.map"    :type :pointer :count 2)
+  (commit    "events.commit"  :type :pointer :count 2)
+  (map       "events.map"     :type :pointer :count 2)
+  (unmap     "events.unmap"   :type :pointer :count 2)
+  (destroy   "events.destroy" :type :pointer :count 2)
   (cur-width  "current.width"  :type :int)    ; mapped size, surface-local
   (cur-height "current.height" :type :int))
 
